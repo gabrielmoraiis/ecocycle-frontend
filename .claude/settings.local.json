@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze *)",
+      "Bash(flutter devices *)",
+      "Bash(flutter run *)",
+      "Bash(echo \"started in background, pid $!\")",
+      "Skill(run)",
+      "Bash(adb -s emulator-5554 shell dumpsys window windows)",
+      "Bash(disown)",
+      "Bash(adb -s emulator-5554 shell dumpsys window)",
+      "Bash(flutter pub *)"
+    ]
+  }
+}
