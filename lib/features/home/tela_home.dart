@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/providers/progresso_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../album/tela_album.dart';
 import '../aprender/tela_aprender.dart';
 import '../mapa/tela_mapa.dart';
+import '../perfil/tela_perfil.dart';
 import '../scanner/tela_scanner.dart';
 
 class TelaHome extends StatefulWidget {
@@ -16,7 +20,19 @@ class _TelaHomeState extends State<TelaHome> {
   int _abaSelecionada = 2; // Início selecionado por padrão
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProgressoProvider>().carregar();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final progresso = context.watch<ProgressoProvider>().progresso;
+    final int desbloqueadas = progresso?.figurinhasDesbloqueadas ?? 0;
+    final int totalFigurinhas = progresso?.totalFigurinhas ?? 10;
+    final double progressoAlbum = totalFigurinhas == 0 ? 0 : desbloqueadas / totalFigurinhas;
     return Scaffold(
       backgroundColor: AppColors.verdeClaroFundo,
       body: SafeArea(
@@ -46,18 +62,36 @@ class _TelaHomeState extends State<TelaHome> {
                         ],
                       ),
                     ),
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: AppColors.bordaVerdeClara,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.notifications_none_rounded,
-                          color: AppColors.verdeGradienteInicio,
+                    Row(
+                      children: [
+                        Container(
+                          decoration: const BoxDecoration(
+                            color: AppColors.bordaVerdeClara,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.person_outline,
+                              color: AppColors.verdeGradienteInicio,
+                            ),
+                            onPressed: () => _abrirPerfil(context),
+                          ),
                         ),
-                        onPressed: () {},
-                      ),
+                        const SizedBox(width: 8),
+                        Container(
+                          decoration: const BoxDecoration(
+                            color: AppColors.bordaVerdeClara,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.notifications_none_rounded,
+                              color: AppColors.verdeGradienteInicio,
+                            ),
+                            onPressed: () {},
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -276,16 +310,16 @@ class _TelaHomeState extends State<TelaHome> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: LinearProgressIndicator(
-                              value: 5 / 12,
+                              value: progressoAlbum,
                               minHeight: 8,
                               backgroundColor: const Color(0xFFEEEEEE),
                               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.verdeGradienteInicio),
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            '5 de 12 cards desbloqueados',
-                            style: TextStyle(fontSize: 12, color: AppColors.textoCinzaClaro),
+                          Text(
+                            '$desbloqueadas de $totalFigurinhas cards desbloqueados',
+                            style: const TextStyle(fontSize: 12, color: AppColors.textoCinzaClaro),
                           ),
                         ],
                       ),
@@ -329,6 +363,13 @@ class _TelaHomeState extends State<TelaHome> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const TelaAlbum()),
+    );
+  }
+
+  void _abrirPerfil(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TelaPerfil()),
     );
   }
 

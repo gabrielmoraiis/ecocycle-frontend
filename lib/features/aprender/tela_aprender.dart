@@ -1,27 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/data/trilha_presentation_catalog.dart';
+import '../../core/models/trilha.dart' as api;
+import '../../core/network/api_exception.dart';
+import '../../core/providers/progresso_provider.dart';
+import '../../core/services/trilha_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/error_state.dart';
+import '../../core/widgets/loading_indicator.dart';
 import '../album/tela_album.dart';
 import '../mapa/tela_mapa.dart';
 import '../scanner/tela_scanner.dart';
-import 'tela_conquista.dart';
 import 'tela_modulo.dart';
-import 'tela_quiz.dart';
 
 class ModuloTrilha {
+  final int conteudoId;
   final String nome;
   final bool concluido;
-  final List<SecaoModulo>? secoes;
-  final String? tituloQuiz;
-  final List<PerguntaQuiz>? perguntasQuiz;
-  final RecompensaModulo? recompensa;
 
   const ModuloTrilha({
+    required this.conteudoId,
     required this.nome,
     required this.concluido,
-    this.secoes,
-    this.tituloQuiz,
-    this.perguntasQuiz,
-    this.recompensa,
   });
 }
 
@@ -44,48 +45,24 @@ class TrilhaAprendizado {
     required this.modulos,
   });
 
+  factory TrilhaAprendizado.fromApi(api.Trilha trilha) {
+    final apresentacao = trilhaPresentationCatalog[trilha.trilha]!;
+    return TrilhaAprendizado(
+      tituloSecao: apresentacao.tituloSecao,
+      icone: apresentacao.icone,
+      corTema: apresentacao.corTema,
+      corFundoIcone: apresentacao.corFundoIcone,
+      titulo: trilha.nomeExibicao,
+      subtitulo: apresentacao.subtitulo,
+      modulos: trilha.conteudos
+          .map((c) => ModuloTrilha(conteudoId: c.id, nome: c.titulo, concluido: c.quizConcluido))
+          .toList(),
+    );
+  }
+
   double get progresso =>
-      modulos.where((modulo) => modulo.concluido).length / modulos.length;
+      modulos.isEmpty ? 0 : modulos.where((modulo) => modulo.concluido).length / modulos.length;
 }
-
-const List<TrilhaAprendizado> _trilhas = [
-  TrilhaAprendizado(
-    tituloSecao: "TRILHA 1 - OS 4 R'S",
-    icone: Icons.refresh,
-    corTema: AppColors.verdeGradienteInicio,
-    corFundoIcone: AppColors.verdeClaroFundo,
-    titulo: 'Os 4Rs do consumo consciente',
-    subtitulo: 'Reduzir, Reutilizar, Reciclar e Reparar',
-    modulos: [
-      ModuloTrilha(nome: 'Reduzir', concluido: true),
-      ModuloTrilha(nome: 'Reutilizar', concluido: true),
-      ModuloTrilha(
-        nome: 'Reciclar',
-        concluido: false,
-        secoes: secoesModuloReciclar,
-        tituloQuiz: 'Quiz: na lixeira certa!',
-        perguntasQuiz: perguntasQuizReciclar,
-        recompensa: recompensaModuloReciclar,
-      ),
-      ModuloTrilha(nome: 'Reparar', concluido: false),
-    ],
-  ),
-  TrilhaAprendizado(
-    tituloSecao: 'TRILHA 2 - LIXO ELETRÔNICO',
-    icone: Icons.desktop_windows_outlined,
-    corTema: Colors.orange,
-    corFundoIcone: Color(0xFFFFF3E0),
-    titulo: 'O problema do e-lixo',
-    subtitulo: 'O problema, componentes, substâncias',
-    modulos: [
-      ModuloTrilha(nome: 'O problema', concluido: true),
-      ModuloTrilha(nome: 'Componentes', concluido: false),
-      ModuloTrilha(nome: 'Substâncias', concluido: false),
-    ],
-  ),
-];
-
-const int _figurinhasDesbloqueadas = 2;
 
 class TelaAprender extends StatefulWidget {
   const TelaAprender({super.key});
@@ -97,6 +74,38 @@ class TelaAprender extends StatefulWidget {
 class _TelaAprenderState extends State<TelaAprender> {
   int _abaSelecionada = 1; // Aprender selecionado por padrão
 
+  late final TrilhaService _trilhaService;
+  bool _carregando = true;
+  ApiException? _erro;
+  List<TrilhaAprendizado> _trilhas = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _trilhaService = TrilhaService(context.read());
+    _carregarTrilhas();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProgressoProvider>().carregar();
+    });
+  }
+
+  Future<void> _carregarTrilhas() async {
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+    try {
+      final trilhas = await _trilhaService.listarTrilhas();
+      setState(() {
+        _trilhas = trilhas.map(TrilhaAprendizado.fromApi).toList();
+      });
+    } on ApiException catch (e) {
+      setState(() => _erro = e);
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final int totalModulos = _trilhas.fold(0, (soma, trilha) => soma + trilha.modulos.length);
@@ -104,6 +113,8 @@ class _TelaAprenderState extends State<TelaAprender> {
       0,
       (soma, trilha) => soma + trilha.modulos.where((modulo) => modulo.concluido).length,
     );
+    final int figurinhasDesbloqueadas =
+        context.watch<ProgressoProvider>().progresso?.figurinhasDesbloqueadas ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.verdeClaroFundo,
@@ -143,82 +154,90 @@ class _TelaAprenderState extends State<TelaAprender> {
             ),
 
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // --- BANNER VERDE (HERO) ---
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.verdeGradienteInicio,
-                            AppColors.verdeGradienteFim,
-                          ],
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'SUA JORNADA EDUCATIVA',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                              color: AppColors.branco70,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Escolha uma trilha',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textoBranco,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              _construirEstatistica(
-                                AppColors.destaqueVerdeClaro,
-                                '$modulosConcluidos/$totalModulos módulos',
-                              ),
-                              _construirEstatistica(
-                                Colors.amber,
-                                '$_figurinhasDesbloqueadas figurinhas',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+              child: _carregando
+                  ? const LoadingIndicator()
+                  : _erro != null
+                      ? ErrorState(message: _erro!.message, onRetry: _carregarTrilhas)
+                      : RefreshIndicator(
+                          onRefresh: _carregarTrilhas,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // --- BANNER VERDE (HERO) ---
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppColors.verdeGradienteInicio,
+                                        AppColors.verdeGradienteFim,
+                                      ],
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'SUA JORNADA EDUCATIVA',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.2,
+                                          color: AppColors.branco70,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      const Text(
+                                        'Escolha uma trilha',
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textoBranco,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Wrap(
+                                        spacing: 12,
+                                        runSpacing: 12,
+                                        children: [
+                                          _construirEstatistica(
+                                            AppColors.destaqueVerdeClaro,
+                                            '$modulosConcluidos/$totalModulos módulos',
+                                          ),
+                                          _construirEstatistica(
+                                            Colors.amber,
+                                            '$figurinhasDesbloqueadas figurinhas',
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
 
-                    // --- TRILHAS ---
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (int i = 0; i < _trilhas.length; i++) ...[
-                            _construirTituloSecao(_trilhas[i].tituloSecao),
-                            const SizedBox(height: 12),
-                            _construirCartaoTrilha(_trilhas[i]),
-                            SizedBox(height: i == _trilhas.length - 1 ? 24 : 24),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                                // --- TRILHAS ---
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      for (int i = 0; i < _trilhas.length; i++) ...[
+                                        _construirTituloSecao(_trilhas[i].tituloSecao),
+                                        const SizedBox(height: 12),
+                                        _construirCartaoTrilha(_trilhas[i]),
+                                        const SizedBox(height: 24),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
             ),
           ],
         ),
@@ -270,8 +289,13 @@ class _TelaAprenderState extends State<TelaAprender> {
     );
   }
 
-  void _abrirModulo(BuildContext context, TrilhaAprendizado trilha, ModuloTrilha modulo, int indice) {
-    Navigator.push(
+  Future<void> _abrirModulo(
+    BuildContext context,
+    TrilhaAprendizado trilha,
+    ModuloTrilha modulo,
+    int indice,
+  ) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TelaModulo(
@@ -279,13 +303,11 @@ class _TelaAprenderState extends State<TelaAprender> {
           tituloModulo: modulo.nome,
           numeroModulo: indice + 1,
           totalModulos: trilha.modulos.length,
-          secoes: modulo.secoes!,
-          tituloQuiz: modulo.tituloQuiz,
-          perguntasQuiz: modulo.perguntasQuiz,
-          recompensa: modulo.recompensa,
+          conteudoId: modulo.conteudoId,
         ),
       ),
     );
+    if (mounted) _carregarTrilhas();
   }
 
   Widget _construirTituloSecao(String texto) {
@@ -399,7 +421,7 @@ class _TelaAprenderState extends State<TelaAprender> {
 
   Widget _construirChipModulo(ModuloTrilha modulo, Color corTema, TrilhaAprendizado trilha, int indice) {
     return GestureDetector(
-      onTap: modulo.secoes == null ? null : () => _abrirModulo(context, trilha, modulo, indice),
+      onTap: () => _abrirModulo(context, trilha, modulo, indice),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(

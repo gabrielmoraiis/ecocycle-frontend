@@ -1,196 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/data/figurinha_presentation_catalog.dart';
+import '../../core/models/figurinha.dart';
+import '../../core/providers/figurinhas_provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/error_state.dart';
+import '../../core/widgets/loading_indicator.dart';
 import '../aprender/tela_aprender.dart';
 import '../mapa/tela_mapa.dart';
 import '../scanner/tela_scanner.dart';
 import 'tela_info_figurinha.dart';
-
-class ComponenteAlbum {
-  final String titulo;
-  final String subtitulo;
-  final IconData icone;
-  final String raridade;
-  final Color corFundo;
-  final Color corIcone;
-  final Color corBadgeFundo;
-  final Color corBadgeTexto;
-  final String substanciasPresentes;
-  final String riscoAmbiental;
-  final String descarteCorreto;
-  final String comoDesbloquear;
-
-  const ComponenteAlbum({
-    required this.titulo,
-    required this.subtitulo,
-    required this.icone,
-    required this.raridade,
-    required this.corFundo,
-    required this.corIcone,
-    required this.corBadgeFundo,
-    required this.corBadgeTexto,
-    required this.substanciasPresentes,
-    required this.riscoAmbiental,
-    required this.descarteCorreto,
-    required this.comoDesbloquear,
-  });
-}
-
-const List<ComponenteAlbum> _componentesIniciais = [
-  ComponenteAlbum(
-    titulo: 'Placa-mãe',
-    subtitulo: 'Chumbo e Ouro',
-    icone: Icons.memory,
-    raridade: 'ÉPICO',
-    corFundo: Color(0xFFE1F0E2),
-    corIcone: AppColors.verdeGradienteInicio,
-    corBadgeFundo: Color(0xFFC8E6C9),
-    corBadgeTexto: AppColors.verdeEscuroTexto,
-    substanciasPresentes:
-        'Chumbo, Ouro, Paládio - metais preciosos e tóxicos presentes nos circuitos.',
-    riscoAmbiental:
-        'Contamina solo e água. O chumbo é neurotóxico e persiste no ambiente por décadas.',
-    descarteCorreto:
-        'Leve a um ponto de coleta de eletrônicos ou cooperativa de reciclagem especializada.',
-    comoDesbloquear: 'Desbloqueado ao escanear um computador com o Scanner IA',
-  ),
-  ComponenteAlbum(
-    titulo: 'Tela LCD',
-    subtitulo: 'Mercúrio',
-    icone: Icons.desktop_windows_outlined,
-    raridade: 'COMUM',
-    corFundo: Color(0xFFDDEBFB),
-    corIcone: Colors.blue,
-    corBadgeFundo: Color(0xFFBBDEFB),
-    corBadgeTexto: Colors.blue,
-    substanciasPresentes:
-        'Mercúrio, Cristal líquido - substâncias tóxicas presentes na retroiluminação e no painel.',
-    riscoAmbiental:
-        'O mercúrio é altamente tóxico ao sistema nervoso e contamina lençóis freáticos.',
-    descarteCorreto:
-        'Entregue em pontos de coleta específicos para eletrônicos. Nunca quebre a tela.',
-    comoDesbloquear: 'Desbloqueado ao escanear uma TV ou monitor com o Scanner IA',
-  ),
-  ComponenteAlbum(
-    titulo: 'Bateria de Lítio',
-    subtitulo: 'Lítio e Cobalto',
-    icone: Icons.battery_full_outlined,
-    raridade: 'RARO',
-    corFundo: Color(0xFFFBEFD2),
-    corIcone: Colors.orange,
-    corBadgeFundo: Color(0xFFFFE0B2),
-    corBadgeTexto: Colors.orange,
-    substanciasPresentes:
-        'Lítio, Cobalto, Manganês - metais tóxicos ao meio ambiente se descartados incorretamente.',
-    riscoAmbiental:
-        'Contamina solo e lençol freático. Pode causar incêndios em aterros sanitários.',
-    descarteCorreto:
-        'Leve ao ponto de coleta mais próximo ou a uma loja de eletrônicos parceira. Nunca no lixo comum.',
-    comoDesbloquear: 'Desbloqueado ao escanear um celular com o Scanner IA',
-  ),
-  ComponenteAlbum(
-    titulo: 'Cabo USB',
-    subtitulo: 'Cobre e PVC',
-    icone: Icons.cable,
-    raridade: 'COMUM',
-    corFundo: Color(0xFFFAD9E1),
-    corIcone: Colors.pink,
-    corBadgeFundo: Color(0xFFF8BBD0),
-    corBadgeTexto: Colors.pink,
-    substanciasPresentes:
-        'Cobre, PVC - metal reciclável envolto em plástico não biodegradável.',
-    riscoAmbiental:
-        'O PVC libera dioxinas tóxicas quando queimado incorretamente.',
-    descarteCorreto:
-        'Separe o cobre do plástico em cooperativas de reciclagem, se possível.',
-    comoDesbloquear: 'Desbloqueado ao escanear um cabo com o Scanner IA',
-  ),
-  ComponenteAlbum(
-    titulo: 'Smartphone',
-    subtitulo: 'Cobre e PVC',
-    icone: Icons.smartphone_outlined,
-    raridade: 'RARO',
-    corFundo: Color(0xFFEBDFF3),
-    corIcone: Colors.purple,
-    corBadgeFundo: Color(0xFFE1BEE7),
-    corBadgeTexto: Colors.purple,
-    substanciasPresentes:
-        'Cobre, PVC, terras raras - materiais valiosos misturados em plásticos difíceis de separar.',
-    riscoAmbiental:
-        'O descarte incorreto libera metais pesados e desperdiça materiais recicláveis escassos.',
-    descarteCorreto:
-        'Leve a um ponto de coleta de eletrônicos ou devolva ao fabricante em programas de logística reversa.',
-    comoDesbloquear: 'Desbloqueado ao escanear um smartphone com o Scanner IA',
-  ),
-];
-
-// --- COMPONENTES QUE O SCANNER IA AINDA PODE DESCOBRIR ---
-const List<ComponenteAlbum> componentesEscaneaveis = [
-  ComponenteAlbum(
-    titulo: 'Fonte de Alimentação',
-    subtitulo: 'Capacitores',
-    icone: Icons.electrical_services_outlined,
-    raridade: 'RARO',
-    corFundo: Color(0xFFFFE9E6),
-    corIcone: Colors.deepOrange,
-    corBadgeFundo: Color(0xFFFFCCBC),
-    corBadgeTexto: Colors.deepOrange,
-    substanciasPresentes:
-        'Capacitores eletrolíticos, chumbo em soldas - podem reter carga elétrica mesmo desligados.',
-    riscoAmbiental:
-        'Capacitores podem vazar eletrólitos tóxicos e representam risco de choque se manuseados sem cuidado.',
-    descarteCorreto:
-        'Nunca abra ou perfure. Leve a um ponto de coleta de eletrônicos.',
-    comoDesbloquear: 'Desbloqueado ao escanear uma fonte de alimentação com o Scanner IA',
-  ),
-  ComponenteAlbum(
-    titulo: 'Alto-falante',
-    subtitulo: 'Ímã de Neodímio',
-    icone: Icons.speaker_outlined,
-    raridade: 'ÉPICO',
-    corFundo: Color(0xFFE8EAF6),
-    corIcone: Colors.indigo,
-    corBadgeFundo: Color(0xFFC5CAE9),
-    corBadgeTexto: Colors.indigo,
-    substanciasPresentes:
-        'Ímãs de neodímio, cobre - terras raras valiosas usadas na bobina e no ímã.',
-    riscoAmbiental:
-        'A extração de terras raras é altamente poluente; reciclar evita mais mineração.',
-    descarteCorreto:
-        'Entregue em pontos de coleta de eletrônicos para recuperação dos metais.',
-    comoDesbloquear: 'Desbloqueado ao escanear uma caixa de som com o Scanner IA',
-  ),
-];
-
-const int _totalCards = 12;
-
-// --- ESTADO EM MEMÓRIA DOS COMPONENTES JÁ DESBLOQUEADOS ---
-class AlbumRepositorio {
-  AlbumRepositorio._();
-
-  static final List<ComponenteAlbum> _desbloqueados = List.of(_componentesIniciais);
-
-  static List<ComponenteAlbum> get desbloqueados => List.unmodifiable(_desbloqueados);
-
-  static int get totalCards => _totalCards;
-
-  static int get bloqueadosCount => _totalCards - _desbloqueados.length;
-
-  static bool foiDesbloqueado(ComponenteAlbum componente) =>
-      _desbloqueados.any((c) => c.titulo == componente.titulo);
-
-  static ComponenteAlbum? proximoParaDesbloquear() {
-    for (final componente in componentesEscaneaveis) {
-      if (!foiDesbloqueado(componente)) return componente;
-    }
-    return null;
-  }
-
-  static void desbloquear(ComponenteAlbum componente) {
-    if (!foiDesbloqueado(componente)) {
-      _desbloqueados.add(componente);
-    }
-  }
-}
 
 class TelaAlbum extends StatefulWidget {
   const TelaAlbum({super.key});
@@ -203,173 +23,28 @@ class _TelaAlbumState extends State<TelaAlbum> {
   int _abaSelecionada = 4; // Álbum selecionado por padrão
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<FigurinhasProvider>().carregar();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final List<ComponenteAlbum> desbloqueados = AlbumRepositorio.desbloqueados;
-    final int bloqueadosCount = AlbumRepositorio.bloqueadosCount;
-    final double progresso = desbloqueados.length / AlbumRepositorio.totalCards;
+    final provider = context.watch<FigurinhasProvider>();
 
     return Scaffold(
       backgroundColor: AppColors.verdeClaroFundo,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- TOPO: LOGO + CONTADOR ---
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    RichText(
-                      text: const TextSpan(
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textoEscuro,
-                        ),
-                        children: [
-                          TextSpan(text: 'Eco'),
-                          TextSpan(
-                            text: 'Cycle',
-                            style: TextStyle(color: AppColors.verdeGradienteInicio),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.verdeClaroFundo,
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(color: AppColors.bordaVerdeClara),
-                      ),
-                      child: Text(
-                        '${desbloqueados.length}/${AlbumRepositorio.totalCards} cards',
-                        style: const TextStyle(
-                          color: AppColors.verdeEscuroTexto,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // --- BANNER VERDE (HERO) ---
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.verdeGradienteInicio,
-                      AppColors.verdeGradienteFim,
-                    ],
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Álbum de Componentes',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textoBranco,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Escaneie aparelhos e leia conteúdos para desbloquear',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.branco70,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: progresso,
-                        minHeight: 10,
-                        backgroundColor: AppColors.branco20,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.destaqueVerdeClaro),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${desbloqueados.length} desbloqueados',
-                          style: const TextStyle(color: AppColors.branco70, fontSize: 13),
-                        ),
-                        Text(
-                          '${(progresso * 100).round()}%',
-                          style: const TextStyle(
-                            color: AppColors.textoBranco,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // --- SEÇÃO DESBLOQUEADOS ---
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _construirTituloSecao('DESBLOQUEADOS'),
-                    const SizedBox(height: 12),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: desbloqueados.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        childAspectRatio: 0.78,
-                      ),
-                      itemBuilder: (context, index) {
-                        return _construirCartaoDesbloqueado(desbloqueados[index]);
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // --- SEÇÃO BLOQUEADOS ---
-                    _construirTituloSecao('BLOQUEADOS ($bloqueadosCount)'),
-                    const SizedBox(height: 12),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: bloqueadosCount,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        childAspectRatio: 0.78,
-                      ),
-                      itemBuilder: (context, index) => _construirCartaoBloqueado(),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        child: provider.isLoading && provider.figurinhas.isEmpty
+            ? const LoadingIndicator()
+            : provider.erro != null && provider.figurinhas.isEmpty
+                ? ErrorState(
+                    message: provider.erro!.message,
+                    onRetry: () => context.read<FigurinhasProvider>().recarregar(),
+                  )
+                : _construirConteudo(provider),
       ),
 
       // --- BARRA DE NAVEGAÇÃO INFERIOR ---
@@ -395,13 +70,184 @@ class _TelaAlbumState extends State<TelaAlbum> {
     );
   }
 
+  Widget _construirConteudo(FigurinhasProvider provider) {
+    final List<Figurinha> desbloqueadas = provider.desbloqueadas;
+    final List<Figurinha> bloqueadas = provider.bloqueadas;
+    final int total = provider.figurinhas.length;
+    final double progresso = total == 0 ? 0 : desbloqueadas.length / total;
+
+    return RefreshIndicator(
+      onRefresh: () => context.read<FigurinhasProvider>().recarregar(),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- TOPO: LOGO + CONTADOR ---
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  RichText(
+                    text: const TextSpan(
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textoEscuro,
+                      ),
+                      children: [
+                        TextSpan(text: 'Eco'),
+                        TextSpan(
+                          text: 'Cycle',
+                          style: TextStyle(color: AppColors.verdeGradienteInicio),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.verdeClaroFundo,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: AppColors.bordaVerdeClara),
+                    ),
+                    child: Text(
+                      '${desbloqueadas.length}/$total cards',
+                      style: const TextStyle(
+                        color: AppColors.verdeEscuroTexto,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // --- BANNER VERDE (HERO) ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.verdeGradienteInicio,
+                    AppColors.verdeGradienteFim,
+                  ],
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Álbum de Componentes',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textoBranco,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Escaneie aparelhos e leia conteúdos para desbloquear',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: AppColors.branco70,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: progresso,
+                      minHeight: 10,
+                      backgroundColor: AppColors.branco20,
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.destaqueVerdeClaro),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${desbloqueadas.length} desbloqueados',
+                        style: const TextStyle(color: AppColors.branco70, fontSize: 13),
+                      ),
+                      Text(
+                        '${(progresso * 100).round()}%',
+                        style: const TextStyle(
+                          color: AppColors.textoBranco,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // --- SEÇÃO DESBLOQUEADOS ---
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _construirTituloSecao('DESBLOQUEADOS'),
+                  const SizedBox(height: 12),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: desbloqueadas.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 0.78,
+                    ),
+                    itemBuilder: (context, index) {
+                      return _construirCartaoDesbloqueado(desbloqueadas[index]);
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // --- SEÇÃO BLOQUEADOS ---
+                  _construirTituloSecao('BLOQUEADOS (${bloqueadas.length})'),
+                  const SizedBox(height: 12),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: bloqueadas.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 0.78,
+                    ),
+                    itemBuilder: (context, index) => _construirCartaoBloqueado(),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // --- MÉTODOS AUXILIARES PARA NÃO REPETIR CÓDIGO ---
 
-  void _abrirInfoFigurinha(ComponenteAlbum componente) {
+  void _abrirInfoFigurinha(Figurinha figurinha) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TelaInfoFigurinha(componente: componente),
+        builder: (context) => TelaInfoFigurinha(figurinha: figurinha),
       ),
     );
   }
@@ -418,9 +264,10 @@ class _TelaAlbumState extends State<TelaAlbum> {
     );
   }
 
-  Widget _construirCartaoDesbloqueado(ComponenteAlbum componente) {
+  Widget _construirCartaoDesbloqueado(Figurinha figurinha) {
+    final apresentacao = apresentacaoDaFigurinha(figurinha.codigo);
     return GestureDetector(
-      onTap: () => _abrirInfoFigurinha(componente),
+      onTap: () => _abrirInfoFigurinha(figurinha),
       child: Container(
       decoration: BoxDecoration(
         color: AppColors.fundoBranco,
@@ -434,7 +281,7 @@ class _TelaAlbumState extends State<TelaAlbum> {
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: componente.corFundo,
+                color: apresentacao.corFundo,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Stack(
@@ -445,21 +292,21 @@ class _TelaAlbumState extends State<TelaAlbum> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: componente.corBadgeFundo,
+                        color: apresentacao.corBadgeFundo,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        componente.raridade,
+                        apresentacao.raridade,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: componente.corBadgeTexto,
+                          color: apresentacao.corBadgeTexto,
                         ),
                       ),
                     ),
                   ),
                   Center(
-                    child: Icon(componente.icone, color: componente.corIcone, size: 36),
+                    child: Icon(apresentacao.icone, color: apresentacao.corIcone, size: 36),
                   ),
                 ],
               ),
@@ -471,17 +318,21 @@ class _TelaAlbumState extends State<TelaAlbum> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  componente.titulo,
+                  figurinha.nome ?? '',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textoEscuro,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  componente.subtitulo,
+                  figurinha.descricao ?? '',
                   style: const TextStyle(fontSize: 12, color: AppColors.textoCinzaClaro),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

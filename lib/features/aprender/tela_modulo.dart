@@ -1,70 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/models/conteudo_educativo.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/services/trilha_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/error_state.dart';
+import '../../core/widgets/loading_indicator.dart';
 import '../album/tela_album.dart';
 import '../mapa/tela_mapa.dart';
 import '../scanner/tela_scanner.dart';
 import 'cabecalho_modulo.dart';
 import 'tela_aprender.dart';
-import 'tela_conquista.dart';
 import 'tela_quiz.dart';
-
-class SecaoModulo {
-  final IconData icone;
-  final Color corIcone;
-  final Color corFundoIcone;
-  final String titulo;
-  final String texto;
-  final String? destaque;
-
-  const SecaoModulo({
-    required this.icone,
-    required this.corIcone,
-    required this.corFundoIcone,
-    required this.titulo,
-    required this.texto,
-    this.destaque,
-  });
-}
-
-// --- CONTEÚDO DO MÓDULO "RECICLAR" (TRILHA 1) ---
-const List<SecaoModulo> secoesModuloReciclar = [
-  SecaoModulo(
-    icone: Icons.info_outline,
-    corIcone: AppColors.verdeGradienteInicio,
-    corFundoIcone: AppColors.verdeClaroFundo,
-    titulo: 'O que é reciclar?',
-    texto:
-        'Reciclar é transformar resíduos em novos materiais. Uma garrafa PET vira fibra de roupa. Uma lata de alumínio vira outra lata em apenas 60 dias.',
-    destaque: 'Reciclar alumínio gasta 95% menos energia do que produzir alumínio novo.',
-  ),
-  SecaoModulo(
-    icone: Icons.info_outline,
-    corIcone: Colors.amber,
-    corFundoIcone: Color(0xFFFFF8E1),
-    titulo: 'E os eletrônicos?',
-    texto:
-        'Eletrônicos não vão na reciclagem comum. Contêm chumbo, mercúrio e cádmio - precisam de pontos de coleta especializados.',
-  ),
-  SecaoModulo(
-    icone: Icons.location_on_outlined,
-    corIcone: Colors.blue,
-    corFundoIcone: Color(0xFFE3F2FD),
-    titulo: 'Onde descartar?',
-    texto:
-        'Use a aba Mapa para encontrar o ponto de coleta mais próximo. No Brasil, apenas 3% dos eletrônicos são descartados corretamente.',
-  ),
-];
 
 class TelaModulo extends StatefulWidget {
   final String rotuloTrilha;
   final String tituloModulo;
   final int numeroModulo;
   final int totalModulos;
-  final List<SecaoModulo> secoes;
+  final int conteudoId;
   final String textoBotao;
-  final String? tituloQuiz;
-  final List<PerguntaQuiz>? perguntasQuiz;
-  final RecompensaModulo? recompensa;
 
   const TelaModulo({
     super.key,
@@ -72,11 +29,8 @@ class TelaModulo extends StatefulWidget {
     required this.tituloModulo,
     required this.numeroModulo,
     required this.totalModulos,
-    required this.secoes,
+    required this.conteudoId,
     this.textoBotao = 'Pronto! Jogar o mini-game',
-    this.tituloQuiz,
-    this.perguntasQuiz,
-    this.recompensa,
   });
 
   @override
@@ -85,6 +39,36 @@ class TelaModulo extends StatefulWidget {
 
 class _TelaModuloState extends State<TelaModulo> {
   final int _abaSelecionada = 1; // Aprender selecionado por padrão
+
+  late final TrilhaService _trilhaService;
+  bool _carregando = true;
+  ApiException? _erro;
+  ConteudoEducativo? _conteudo;
+
+  @override
+  void initState() {
+    super.initState();
+    _trilhaService = TrilhaService(context.read());
+    _carregarConteudo();
+  }
+
+  Future<void> _carregarConteudo() async {
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+    try {
+      var conteudo = await _trilhaService.buscarConteudo(widget.conteudoId);
+      if (!conteudo.lido) {
+        conteudo = await _trilhaService.marcarLido(widget.conteudoId);
+      }
+      setState(() => _conteudo = conteudo);
+    } on ApiException catch (e) {
+      setState(() => _erro = e);
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,34 +110,30 @@ class _TelaModuloState extends State<TelaModulo> {
             ),
 
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // --- CABEÇALHO DO MÓDULO (HERO) ---
-                    CabecalhoModulo(
-                      rotuloTrilha: widget.rotuloTrilha,
-                      titulo: widget.tituloModulo,
-                      numeroAtual: widget.numeroModulo,
-                      total: widget.totalModulos,
-                    ),
+              child: _carregando
+                  ? const LoadingIndicator()
+                  : _erro != null
+                      ? ErrorState(message: _erro!.message, onRetry: _carregarConteudo)
+                      : SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // --- CABEÇALHO DO MÓDULO (HERO) ---
+                              CabecalhoModulo(
+                                rotuloTrilha: widget.rotuloTrilha,
+                                titulo: widget.tituloModulo,
+                                numeroAtual: widget.numeroModulo,
+                                total: widget.totalModulos,
+                              ),
 
-                    // --- SEÇÕES DE CONTEÚDO ---
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (final secao in widget.secoes) ...[
-                            _construirCartaoSecao(secao),
-                            const SizedBox(height: 16),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                              // --- CONTEÚDO (MARKDOWN) ---
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                                child: _construirCartaoConteudo(_conteudo!),
+                              ),
+                            ],
+                          ),
+                        ),
             ),
 
             // --- BOTÃO FIXO: PRONTO! JOGAR O MINI-GAME ---
@@ -164,9 +144,7 @@ class _TelaModuloState extends State<TelaModulo> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: widget.perguntasQuiz == null || widget.recompensa == null
-                      ? null
-                      : () => _abrirQuiz(context),
+                  onPressed: (_conteudo?.quizId == null) ? null : () => _abrirQuiz(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.verdeGradienteInicio,
                     foregroundColor: AppColors.fundoBranco,
@@ -223,15 +201,14 @@ class _TelaModuloState extends State<TelaModulo> {
       MaterialPageRoute(
         builder: (context) => TelaQuizModulo(
           rotuloTrilha: widget.rotuloTrilha,
-          tituloQuiz: widget.tituloQuiz!,
-          perguntas: widget.perguntasQuiz!,
-          recompensa: widget.recompensa!,
+          tituloQuiz: 'Quiz: ${widget.tituloModulo}',
+          quizId: _conteudo!.quizId!,
         ),
       ),
     );
   }
 
-  Widget _construirCartaoSecao(SecaoModulo secao) {
+  Widget _construirCartaoConteudo(ConteudoEducativo conteudo) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -240,66 +217,16 @@ class _TelaModuloState extends State<TelaModulo> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.bordaVerdeClara),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(color: secao.corFundoIcone, shape: BoxShape.circle),
-                child: Icon(secao.icone, color: secao.corIcone, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  secao.titulo,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textoEscuro,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            secao.texto,
-            style: const TextStyle(fontSize: 14, color: AppColors.textoCinzaClaro, height: 1.4),
-          ),
-          if (secao.destaque != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.verdeClaroFundo,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.eco_outlined, color: AppColors.verdeEscuroTexto, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      secao.destaque!,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.verdeEscuroTexto,
-                        height: 1.3,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
+      child: MarkdownBody(
+        data: conteudo.corpo,
+        styleSheet: MarkdownStyleSheet(
+          p: const TextStyle(fontSize: 14, color: AppColors.textoCinzaClaro, height: 1.4),
+          h1: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textoEscuro),
+          h2: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textoEscuro),
+          h3: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textoEscuro),
+          strong: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.verdeEscuroTexto),
+          listBullet: const TextStyle(fontSize: 14, color: AppColors.textoCinzaClaro),
+        ),
       ),
     );
   }

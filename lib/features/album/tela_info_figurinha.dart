@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+
+import '../../core/data/figurinha_presentation_catalog.dart';
+import '../../core/models/figurinha.dart';
 import '../../core/theme/app_colors.dart';
 import '../aprender/tela_aprender.dart';
 import '../mapa/tela_mapa.dart';
 import '../scanner/tela_scanner.dart';
-import 'tela_album.dart';
 
 class TelaInfoFigurinha extends StatefulWidget {
-  final ComponenteAlbum componente;
+  final Figurinha figurinha;
 
-  const TelaInfoFigurinha({super.key, required this.componente});
+  const TelaInfoFigurinha({super.key, required this.figurinha});
 
   @override
   State<TelaInfoFigurinha> createState() => _TelaInfoFigurinhaState();
@@ -19,7 +21,8 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
 
   @override
   Widget build(BuildContext context) {
-    final ComponenteAlbum componente = widget.componente;
+    final Figurinha figurinha = widget.figurinha;
+    final apresentacao = apresentacaoDaFigurinha(figurinha.codigo);
 
     return Scaffold(
       backgroundColor: AppColors.verdeClaroFundo,
@@ -69,14 +72,14 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
                             width: 100,
                             height: 100,
                             decoration: BoxDecoration(
-                              color: componente.corFundo,
+                              color: apresentacao.corFundo,
                               borderRadius: BorderRadius.circular(24),
                             ),
-                            child: Icon(componente.icone, color: componente.corIcone, size: 48),
+                            child: Icon(apresentacao.icone, color: apresentacao.corIcone, size: 48),
                           ),
                           const SizedBox(height: 20),
                           Text(
-                            componente.titulo,
+                            figurinha.nome ?? '',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 24,
@@ -88,15 +91,15 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                             decoration: BoxDecoration(
-                              color: componente.corBadgeFundo,
+                              color: apresentacao.corBadgeFundo,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              componente.raridade,
+                              apresentacao.raridade,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: componente.corBadgeTexto,
+                                color: apresentacao.corBadgeTexto,
                               ),
                             ),
                           ),
@@ -105,24 +108,29 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
                     ),
                     const SizedBox(height: 20),
 
+                    if (figurinha.descricao != null && figurinha.descricao!.isNotEmpty) ...[
+                      _construirSecaoInfo(titulo: 'SOBRE', texto: figurinha.descricao!),
+                      const SizedBox(height: 16),
+                    ],
+
                     // --- SUBSTÂNCIAS PRESENTES ---
                     _construirSecaoInfo(
                       titulo: 'SUBSTÂNCIAS PRESENTES',
-                      texto: componente.substanciasPresentes,
+                      texto: apresentacao.substanciasPresentes,
                     ),
                     const SizedBox(height: 16),
 
                     // --- RISCO AMBIENTAL ---
                     _construirSecaoInfo(
                       titulo: 'RISCO AMBIENTAL',
-                      texto: componente.riscoAmbiental,
+                      texto: apresentacao.riscoAmbiental,
                     ),
                     const SizedBox(height: 16),
 
                     // --- DESCARTE CORRETO ---
                     _construirSecaoInfo(
                       titulo: 'DESCARTE CORRETO',
-                      texto: componente.descarteCorreto,
+                      texto: apresentacao.descarteCorreto,
                       corFundo: AppColors.verdeClaroFundo,
                       corBorda: AppColors.bordaVerdeClara,
                       corTitulo: AppColors.verdeEscuroTexto,
@@ -144,7 +152,7 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              componente.comoDesbloquear,
+                              apresentacao.comoDesbloquear,
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.textoCinzaClaro,

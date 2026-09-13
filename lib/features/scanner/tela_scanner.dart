@@ -2,11 +2,28 @@ import 'dart:math';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/data/figurinha_presentation_catalog.dart';
+import '../../core/models/figurinha.dart';
+import '../../core/models/identificador_componente.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/providers/figurinhas_provider.dart';
+import '../../core/providers/progresso_provider.dart';
+import '../../core/services/scanner_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../album/tela_album.dart';
 import '../album/tela_info_figurinha.dart';
 import '../aprender/tela_aprender.dart';
 import '../mapa/tela_mapa.dart';
+
+// Mapeia o código de cada figurinha do tipo SCAN para o identificador de
+// componente esperado pelo contrato da API (BATERIA_LITIO | PLACA_MAE | CABO_USB).
+const Map<String, IdentificadorComponente> _identificadorPorCodigo = {
+  'FIG-08': IdentificadorComponente.bateriaLitio,
+  'FIG-09': IdentificadorComponente.placaMae,
+  'FIG-10': IdentificadorComponente.caboUsb,
+};
 
 class TelaScanner extends StatefulWidget {
   const TelaScanner({super.key});
@@ -26,12 +43,14 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
 
   final Random _sorteio = Random();
   late final AnimationController _pulsoController;
+  late final ScannerService _scannerService;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _pulsoController = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+    _scannerService = ScannerService(context.read());
     _inicializarCamera();
   }
 
@@ -358,34 +377,53 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
       _falhaIdentificacao = false;
     });
 
-    // Simula o tempo de análise da IA (sem backend de reconhecimento real ainda).
+    // A imagem é analisada aqui, on-device (simulado); apenas o identificador
+    // e a confiança calculados são enviados ao back-end, conforme o contrato.
     await Future.delayed(const Duration(milliseconds: 1400));
     if (!mounted) return;
 
-    final ComponenteAlbum? componente = AlbumRepositorio.proximoParaDesbloquear();
-    // Sem componente restante para descobrir ou "falha" simulada de reconhecimento.
-    final bool falhou = componente == null || _sorteio.nextDouble() < 0.25;
+    final identificadores = _identificadorPorCodigo.values.toList();
+    final identificador = identificadores[_sorteio.nextInt(identificadores.length)];
+    // Tendencioso para acima do limiar de 60% definido pelo contrato, preservando
+    // a sensação de "geralmente funciona" que a simulação original tinha.
+    final confianca = 45 + _sorteio.nextDouble() * 55;
 
-    if (falhou) {
-      setState(() {
-        _processando = false;
-        _falhaIdentificacao = true;
-      });
-      return;
+    try {
+      final resultado = await _scannerService.reconhecer(identificador, confianca);
+
+      if (!mounted) return;
+
+      if (!resultado.reconhecido || resultado.figurinha == null) {
+        setState(() {
+          _processando = false;
+          _falhaIdentificacao = true;
+        });
+        return;
+      }
+
+      if (resultado.novaDesbloqueada) {
+        context.read<FigurinhasProvider>().recarregar();
+        context.read<ProgressoProvider>().recarregar();
+      }
+
+      setState(() => _processando = false);
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => TelaInfoFigurinha(figurinha: resultado.figurinha!)),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _processando = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     }
-
-    AlbumRepositorio.desbloquear(componente);
-    setState(() => _processando = false);
-    if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => TelaInfoFigurinha(componente: componente)),
-    );
   }
 
   void _abrirBuscaManual() {
-    final List<ComponenteAlbum> disponiveis =
-        componentesEscaneaveis.where((c) => !AlbumRepositorio.foiDesbloqueado(c)).toList();
+    final bloqueadas = context
+        .read<FigurinhasProvider>()
+        .bloqueadas
+        .where((f) => f.tipo == TipoFigurinha.scan)
+        .toList();
 
     showModalBottomSheet(
       context: context,
@@ -404,7 +442,7 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textoEscuro),
                 ),
                 const SizedBox(height: 16),
-                if (disponiveis.isEmpty)
+                if (bloqueadas.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text(
@@ -413,19 +451,24 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
                     ),
                   )
                 else
-                  for (final componente in disponiveis)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(color: componente.corFundo, borderRadius: BorderRadius.circular(10)),
-                        child: Icon(componente.icone, color: componente.corIcone, size: 20),
-                      ),
-                      title: Text(componente.titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(componente.subtitulo),
-                      onTap: () => _selecionarManualmente(componente),
-                    ),
+                  for (final figurinha in bloqueadas)
+                    Builder(builder: (context) {
+                      final apresentacao = apresentacaoDaFigurinha(figurinha.codigo);
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(color: apresentacao.corFundo, borderRadius: BorderRadius.circular(10)),
+                          child: Icon(apresentacao.icone, color: apresentacao.corIcone, size: 20),
+                        ),
+                        title: Text(
+                          'Componente ${figurinha.codigo}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        onTap: () => _selecionarManualmente(figurinha),
+                      );
+                    }),
               ],
             ),
           ),
@@ -434,14 +477,29 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
     );
   }
 
-  void _selecionarManualmente(ComponenteAlbum componente) {
-    AlbumRepositorio.desbloquear(componente);
+  Future<void> _selecionarManualmente(Figurinha figurinha) async {
+    final identificador = _identificadorPorCodigo[figurinha.codigo];
     Navigator.pop(context); // fecha o bottom sheet
-    setState(() => _falhaIdentificacao = false);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => TelaInfoFigurinha(componente: componente)),
-    );
+    if (identificador == null) return;
+
+    try {
+      final resultado = await _scannerService.reconhecer(identificador, 100);
+      if (!mounted) return;
+      setState(() => _falhaIdentificacao = false);
+      if (resultado.novaDesbloqueada) {
+        context.read<FigurinhasProvider>().recarregar();
+        context.read<ProgressoProvider>().recarregar();
+      }
+      if (resultado.figurinha != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => TelaInfoFigurinha(figurinha: resultado.figurinha!)),
+        );
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   void _abrirAlbum(BuildContext context) {

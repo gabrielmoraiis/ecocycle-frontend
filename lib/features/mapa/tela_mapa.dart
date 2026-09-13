@@ -1,65 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../../core/models/ponto_coleta.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/services/ponto_coleta_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/error_state.dart';
+import '../../core/widgets/loading_indicator.dart';
 import '../album/tela_album.dart';
 import '../aprender/tela_aprender.dart';
 import '../scanner/tela_scanner.dart';
 
-class PontoColeta {
-  final String nome;
-  final String endereco;
-  final double latitude;
-  final double longitude;
-  final double distanciaKm;
-  final bool abertoAgora;
-  final List<String> categorias;
-
-  const PontoColeta({
-    required this.nome,
-    required this.endereco,
-    required this.latitude,
-    required this.longitude,
-    required this.distanciaKm,
-    required this.abertoAgora,
-    required this.categorias,
-  });
-}
-
-const List<PontoColeta> _pontosColeta = [
-  PontoColeta(
-    nome: 'Green Eletron - Jandira',
-    endereco: 'Av. Bernandino, 412',
-    latitude: -23.5289,
-    longitude: -46.9028,
-    distanciaKm: 0.4,
-    abertoAgora: true,
-    categorias: ['Eletrônicos', 'Baterias'],
-  ),
-  PontoColeta(
-    nome: 'EcoPonto Barueri',
-    endereco: 'Rua das Palmeiras, 210',
-    latitude: -23.5105,
-    longitude: -46.8763,
-    distanciaKm: 1.2,
-    abertoAgora: true,
-    categorias: ['Eletrônicos'],
-  ),
-  PontoColeta(
-    nome: 'Recicla+ Osasco',
-    endereco: 'Av. dos Autonomistas, 1500',
-    latitude: -23.5325,
-    longitude: -46.7917,
-    distanciaKm: 2.8,
-    abertoAgora: false,
-    categorias: ['Baterias'],
-  ),
-];
-
+// Centralizado na região dos pontos de coleta cadastrados (região central de São Paulo).
 const CameraPosition _posicaoInicial = CameraPosition(
-  target: LatLng(-23.5289, -46.9028),
-  zoom: 13,
+  target: LatLng(-23.561, -46.665),
+  zoom: 12,
 );
 
 class TelaMapa extends StatefulWidget {
@@ -73,11 +31,23 @@ class _TelaMapaState extends State<TelaMapa> {
   final int _abaSelecionada = 0; // Mapa selecionado por padrão
   final TextEditingController _cepController = TextEditingController(text: '06600-000');
 
+  late final PontoColetaService _pontoColetaService;
   GoogleMapController? _controladorMapa;
   String _filtroSelecionado = 'Todos';
-  String _cepPesquisado = '06600-00';
+  String _cepPesquisado = '06600-000';
   int _indicePontoSelecionado = 0;
   bool _buscandoLocalizacao = false;
+
+  bool _carregando = true;
+  ApiException? _erro;
+  List<PontoColeta> _pontos = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _pontoColetaService = PontoColetaService(context.read());
+    _carregarPontos();
+  }
 
   @override
   void dispose() {
@@ -86,9 +56,27 @@ class _TelaMapaState extends State<TelaMapa> {
     super.dispose();
   }
 
+  Future<void> _carregarPontos({double? lat, double? lng}) async {
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+    try {
+      final pontos = await _pontoColetaService.listar(lat: lat, lng: lng, raioKm: 5);
+      setState(() {
+        _pontos = pontos;
+        _indicePontoSelecionado = 0;
+      });
+    } on ApiException catch (e) {
+      setState(() => _erro = e);
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
+
   List<PontoColeta> get _pontosFiltrados {
-    if (_filtroSelecionado == 'Todos') return _pontosColeta;
-    return _pontosColeta.where((p) => p.categorias.contains(_filtroSelecionado)).toList();
+    if (_filtroSelecionado == 'Todos') return _pontos;
+    return _pontos.where((p) => p.tiposResiduoAceitos.contains(_filtroSelecionado)).toList();
   }
 
   @override
@@ -199,7 +187,7 @@ class _TelaMapaState extends State<TelaMapa> {
                     children: [
                       _construirChipFiltro('Todos'),
                       const SizedBox(width: 8),
-                      _construirChipFiltro('Eletrônicos'),
+                      _construirChipFiltro('Celulares'),
                       const SizedBox(width: 8),
                       _construirChipFiltro('Baterias'),
                     ],
@@ -210,46 +198,50 @@ class _TelaMapaState extends State<TelaMapa> {
 
             // --- MAPA ---
             Expanded(
-              child: Stack(
-                children: [
-                  GoogleMap(
-                    initialCameraPosition: _posicaoInicial,
-                    onMapCreated: (controller) => _controladorMapa = controller,
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: true,
-                    markers: {
-                      for (int i = 0; i < pontos.length; i++)
-                        Marker(
-                          markerId: MarkerId(pontos[i].nome),
-                          position: LatLng(pontos[i].latitude, pontos[i].longitude),
-                          infoWindow: InfoWindow(title: pontos[i].nome, snippet: pontos[i].endereco),
-                          icon: i == indiceSelecionado
-                              ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
-                              : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-                          onTap: () => setState(() => _indicePontoSelecionado = i),
+              child: _carregando
+                  ? const LoadingIndicator()
+                  : _erro != null
+                      ? ErrorState(message: _erro!.message, onRetry: () => _carregarPontos())
+                      : Stack(
+                          children: [
+                            GoogleMap(
+                              initialCameraPosition: _posicaoInicial,
+                              onMapCreated: (controller) => _controladorMapa = controller,
+                              myLocationButtonEnabled: false,
+                              zoomControlsEnabled: true,
+                              markers: {
+                                for (int i = 0; i < pontos.length; i++)
+                                  Marker(
+                                    markerId: MarkerId(pontos[i].id.toString()),
+                                    position: LatLng(pontos[i].latitude, pontos[i].longitude),
+                                    infoWindow: InfoWindow(title: pontos[i].nome, snippet: pontos[i].endereco),
+                                    icon: i == indiceSelecionado
+                                        ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
+                                        : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                                    onTap: () => setState(() => _indicePontoSelecionado = i),
+                                  ),
+                              },
+                            ),
+                            Positioned(
+                              right: 16,
+                              bottom: 16,
+                              child: FloatingActionButton(
+                                heroTag: 'localizacaoAtual',
+                                backgroundColor: AppColors.fundoBranco,
+                                foregroundColor: AppColors.verdeGradienteInicio,
+                                elevation: 3,
+                                onPressed: _buscandoLocalizacao ? null : _irParaLocalizacaoAtual,
+                                child: _buscandoLocalizacao
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Icon(Icons.my_location),
+                              ),
+                            ),
+                          ],
                         ),
-                    },
-                  ),
-                  Positioned(
-                    right: 16,
-                    bottom: 16,
-                    child: FloatingActionButton(
-                      heroTag: 'localizacaoAtual',
-                      backgroundColor: AppColors.fundoBranco,
-                      foregroundColor: AppColors.verdeGradienteInicio,
-                      elevation: 3,
-                      onPressed: _buscandoLocalizacao ? null : _irParaLocalizacaoAtual,
-                      child: _buscandoLocalizacao
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.my_location),
-                    ),
-                  ),
-                ],
-              ),
             ),
 
             // --- PAINEL DE PONTOS ENCONTRADOS ---
@@ -392,6 +384,7 @@ class _TelaMapaState extends State<TelaMapa> {
       await _controladorMapa?.animateCamera(
         CameraUpdate.newLatLngZoom(LatLng(posicao.latitude, posicao.longitude), 15),
       );
+      await _carregarPontos(lat: posicao.latitude, lng: posicao.longitude);
     } finally {
       if (mounted) setState(() => _buscandoLocalizacao = false);
     }
@@ -489,7 +482,7 @@ class _TelaMapaState extends State<TelaMapa> {
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 6,
-                    children: [for (final categoria in ponto.categorias) _construirTagCategoria(categoria)],
+                    children: [for (final tipo in ponto.tiposResiduoAceitos) _construirTagCategoria(tipo)],
                   ),
                 ],
               ),
@@ -499,16 +492,18 @@ class _TelaMapaState extends State<TelaMapa> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${ponto.distanciaKm.toString().replaceAll('.', ',')} km',
+                  ponto.distanciaKm == null
+                      ? '--'
+                      : '${ponto.distanciaKm!.toStringAsFixed(1).replaceAll('.', ',')} km',
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.verdeGradienteInicio),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  ponto.abertoAgora ? 'Aberto agora' : 'Fechado',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: ponto.abertoAgora ? AppColors.verdeGradienteInicio : Colors.red,
-                  ),
+                  ponto.horarioFuncionamento,
+                  textAlign: TextAlign.right,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, color: AppColors.textoCinzaClaro),
                 ),
               ],
             ),

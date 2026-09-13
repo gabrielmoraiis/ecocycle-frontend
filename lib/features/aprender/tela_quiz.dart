@@ -1,5 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/models/quiz.dart';
+import '../../core/models/requests/submeter_quiz_request.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/providers/figurinhas_provider.dart';
+import '../../core/providers/progresso_provider.dart';
+import '../../core/services/quiz_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/error_state.dart';
+import '../../core/widgets/loading_indicator.dart';
 import '../album/tela_album.dart';
 import '../mapa/tela_mapa.dart';
 import '../scanner/tela_scanner.dart';
@@ -7,49 +17,16 @@ import 'cabecalho_modulo.dart';
 import 'tela_aprender.dart';
 import 'tela_conquista.dart';
 
-class PerguntaQuiz {
-  final String texto;
-  final List<String> alternativas;
-  final int indiceCorreto;
-
-  const PerguntaQuiz({
-    required this.texto,
-    required this.alternativas,
-    required this.indiceCorreto,
-  });
-}
-
-// --- QUIZ DO MÓDULO "RECICLAR" (TRILHA 1) ---
-const List<PerguntaQuiz> perguntasQuizReciclar = [
-  PerguntaQuiz(
-    texto: 'Uma garrafa PET vazia - qual o destino correto?',
-    alternativas: ['Lixo Comum', 'Reciclagem comum', 'Ponto de eletrônicos', 'Aterro'],
-    indiceCorreto: 1,
-  ),
-  PerguntaQuiz(
-    texto: 'Uma pilha usada - qual o destino correto?',
-    alternativas: ['Lixo Comum', 'Reciclagem comum', 'Ponto de eletrônicos', 'Aterro'],
-    indiceCorreto: 2,
-  ),
-  PerguntaQuiz(
-    texto: 'Um pote de vidro limpo - qual o destino correto?',
-    alternativas: ['Lixo Comum', 'Reciclagem comum', 'Ponto de eletrônicos', 'Aterro'],
-    indiceCorreto: 1,
-  ),
-];
-
 class TelaQuizModulo extends StatefulWidget {
   final String rotuloTrilha;
   final String tituloQuiz;
-  final List<PerguntaQuiz> perguntas;
-  final RecompensaModulo recompensa;
+  final int quizId;
 
   const TelaQuizModulo({
     super.key,
     required this.rotuloTrilha,
     required this.tituloQuiz,
-    required this.perguntas,
-    required this.recompensa,
+    required this.quizId,
   });
 
   @override
@@ -59,8 +36,37 @@ class TelaQuizModulo extends StatefulWidget {
 class _TelaQuizModuloState extends State<TelaQuizModulo> {
   final int _abaSelecionada = 1; // Aprender selecionado por padrão
 
+  late final QuizService _quizService;
+  bool _carregando = true;
+  bool _enviando = false;
+  ApiException? _erro;
+  Quiz? _quiz;
+
   int _indicePergunta = 0;
-  int? _indiceSelecionado;
+  int? _alternativaSelecionada;
+  final Map<int, int> _respostas = {}; // perguntaId -> alternativaId
+
+  @override
+  void initState() {
+    super.initState();
+    _quizService = QuizService(context.read());
+    _carregarQuiz();
+  }
+
+  Future<void> _carregarQuiz() async {
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+    try {
+      final quiz = await _quizService.buscarPorId(widget.quizId);
+      setState(() => _quiz = quiz);
+    } on ApiException catch (e) {
+      setState(() => _erro = e);
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,58 +108,69 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
             ),
 
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CabecalhoModulo(
-                      rotuloTrilha: widget.rotuloTrilha,
-                      titulo: widget.tituloQuiz,
-                      numeroAtual: _indicePergunta + 1,
-                      total: widget.perguntas.length,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                      child: _construirPergunta(),
-                    ),
-                  ],
-                ),
-              ),
+              child: _carregando
+                  ? const LoadingIndicator()
+                  : _erro != null
+                      ? ErrorState(message: _erro!.message, onRetry: _carregarQuiz)
+                      : SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CabecalhoModulo(
+                                rotuloTrilha: widget.rotuloTrilha,
+                                titulo: widget.tituloQuiz,
+                                numeroAtual: _indicePergunta + 1,
+                                total: _quiz!.perguntas.length,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                                child: _construirPergunta(),
+                              ),
+                            ],
+                          ),
+                        ),
             ),
 
             // --- BOTÃO FIXO: PRÓXIMA PERGUNTA / CONCLUIR ---
-            Container(
-              width: double.infinity,
-              color: AppColors.fundoBranco,
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-              child: SizedBox(
+            if (_quiz != null)
+              Container(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _indiceSelecionado == null ? null : _avancar,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.verdeGradienteInicio,
-                    foregroundColor: AppColors.fundoBranco,
-                    disabledBackgroundColor: AppColors.bordaVerdeClara,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _indicePergunta == widget.perguntas.length - 1
-                            ? 'Concluir quiz'
-                            : 'Próxima pergunta',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.chevron_right, size: 20),
-                    ],
+                color: AppColors.fundoBranco,
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (_alternativaSelecionada == null || _enviando) ? null : _avancar,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.verdeGradienteInicio,
+                      foregroundColor: AppColors.fundoBranco,
+                      disabledBackgroundColor: AppColors.bordaVerdeClara,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: _enviando
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.fundoBranco),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _indicePergunta == _quiz!.perguntas.length - 1
+                                    ? 'Concluir quiz'
+                                    : 'Próxima pergunta',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.chevron_right, size: 20),
+                            ],
+                          ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -183,33 +200,58 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
 
   // --- MÉTODOS AUXILIARES PARA NÃO REPETIR CÓDIGO ---
 
-  void _selecionarResposta(int indice) {
-    if (_indiceSelecionado != null) return;
-    setState(() => _indiceSelecionado = indice);
+  void _selecionarResposta(int alternativaId) {
+    setState(() => _alternativaSelecionada = alternativaId);
   }
 
-  void _avancar() {
-    if (_indicePergunta == widget.perguntas.length - 1) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => TelaConquista(recompensa: widget.recompensa)),
-      );
+  Future<void> _avancar() async {
+    final pergunta = _quiz!.perguntas[_indicePergunta];
+    _respostas[pergunta.id] = _alternativaSelecionada!;
+
+    if (_indicePergunta == _quiz!.perguntas.length - 1) {
+      await _submeter();
     } else {
       setState(() {
         _indicePergunta++;
-        _indiceSelecionado = null;
+        _alternativaSelecionada = null;
       });
     }
   }
 
+  Future<void> _submeter() async {
+    setState(() => _enviando = true);
+    try {
+      final respostas = _respostas.entries
+          .map((e) => RespostaQuiz(perguntaId: e.key, alternativaId: e.value))
+          .toList();
+      final resultado = await _quizService.submeter(widget.quizId, respostas);
+
+      if (!mounted) return;
+      context.read<FigurinhasProvider>().recarregar();
+      context.read<ProgressoProvider>().recarregar();
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => TelaConquista(resultado: resultado)),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
   Widget _construirPergunta() {
-    final PerguntaQuiz pergunta = widget.perguntas[_indicePergunta];
+    final Pergunta pergunta = _quiz!.perguntas[_indicePergunta];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          pergunta.texto,
+          pergunta.enunciado,
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -225,11 +267,11 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: _construirOpcao(pergunta, i)),
+                  Expanded(child: _construirOpcao(pergunta.alternativas[i])),
                   const SizedBox(width: 12),
                   Expanded(
                     child: i + 1 < pergunta.alternativas.length
-                        ? _construirOpcao(pergunta, i + 1)
+                        ? _construirOpcao(pergunta.alternativas[i + 1])
                         : const SizedBox.shrink(),
                   ),
                 ],
@@ -240,46 +282,31 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
     );
   }
 
-  Widget _construirOpcao(PerguntaQuiz pergunta, int indice) {
-    final bool respondida = _indiceSelecionado != null;
-    final bool ehCorreta = indice == pergunta.indiceCorreto;
-    final bool ehSelecionada = indice == _indiceSelecionado;
+  Widget _construirOpcao(Alternativa alternativa) {
+    final bool ehSelecionada = alternativa.id == _alternativaSelecionada;
 
-    Color corFundo = AppColors.fundoBranco;
-    Color corBorda = AppColors.bordaVerdeClara;
-    Color corTexto = AppColors.textoEscuro;
-    IconData? icone;
-
-    if (respondida && ehCorreta) {
-      corFundo = AppColors.verdeClaroFundo;
-      corBorda = AppColors.destaqueVerdeClaro;
-      corTexto = AppColors.verdeEscuroTexto;
-      icone = Icons.check_circle;
-    } else if (respondida && ehSelecionada && !ehCorreta) {
-      corFundo = const Color(0xFFFFEBEE);
-      corBorda = Colors.red.shade300;
-      corTexto = Colors.red.shade700;
-      icone = Icons.cancel;
-    }
+    final Color corFundo = ehSelecionada ? AppColors.verdeClaroFundo : AppColors.fundoBranco;
+    final Color corBorda = ehSelecionada ? AppColors.verdeGradienteInicio : AppColors.bordaVerdeClara;
+    final Color corTexto = ehSelecionada ? AppColors.verdeEscuroTexto : AppColors.textoEscuro;
 
     return GestureDetector(
-      onTap: () => _selecionarResposta(indice),
+      onTap: () => _selecionarResposta(alternativa.id),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
         decoration: BoxDecoration(
           color: corFundo,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: corBorda),
+          border: Border.all(color: corBorda, width: ehSelecionada ? 2 : 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (icone != null) ...[
-              Icon(icone, color: corTexto, size: 18),
+            if (ehSelecionada) ...[
+              Icon(Icons.check_circle, color: corTexto, size: 18),
               const SizedBox(height: 6),
             ],
             Text(
-              pergunta.alternativas[indice],
+              alternativa.texto,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: corTexto),
             ),
