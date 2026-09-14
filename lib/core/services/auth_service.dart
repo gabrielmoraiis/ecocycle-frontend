@@ -12,7 +12,10 @@ class AuthService {
 
   Future<AuthResult> registrar(RegisterRequest request) {
     return runApiCall(() async {
-      final response = await _dio.post('/auth/register', data: request.toJson());
+      final response = await _dio.post(
+        '/auth/register',
+        data: request.toJson(),
+      );
       return AuthResult.fromJson(response.data['data'] as Map<String, dynamic>);
     });
   }

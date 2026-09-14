@@ -10,13 +10,21 @@ class ScannerService {
 
   ScannerService(this._dio);
 
-  Future<ResultadoScanner> reconhecer(IdentificadorComponente identificador, double confianca) {
+  Future<ResultadoScanner> reconhecer(
+    IdentificadorComponente identificador,
+    double confianca,
+  ) {
     return runApiCall(() async {
       final response = await _dio.post(
         '/scanner/reconhecer',
-        data: ScannerRequest(identificadorComponente: identificador, confianca: confianca).toJson(),
+        data: ScannerRequest(
+          identificadorComponente: identificador,
+          confianca: confianca,
+        ).toJson(),
       );
-      return ResultadoScanner.fromJson(response.data['data'] as Map<String, dynamic>);
+      return ResultadoScanner.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
     });
   }
 }

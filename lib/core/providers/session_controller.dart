@@ -21,9 +21,9 @@ class SessionController extends ChangeNotifier {
     required AuthService authService,
     required UserService userService,
     FlutterSecureStorage? storage,
-  })  : _authService = authService,
-        _userService = userService,
-        _storage = storage ?? const FlutterSecureStorage();
+  }) : _authService = authService,
+       _userService = userService,
+       _storage = storage ?? const FlutterSecureStorage();
 
   AuthStatus status = AuthStatus.unknown;
   Usuario? usuario;
@@ -52,7 +52,9 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<void> login({required String email, required String senha}) async {
-    final resultado = await _authService.login(LoginRequest(email: email, senha: senha));
+    final resultado = await _authService.login(
+      LoginRequest(email: email, senha: senha),
+    );
     await _aplicarAutenticacao(resultado.token, resultado.usuario);
   }
 
@@ -67,7 +69,10 @@ class SessionController extends ChangeNotifier {
     await _aplicarAutenticacao(resultado.token, resultado.usuario);
   }
 
-  Future<void> _aplicarAutenticacao(String novoToken, Usuario novoUsuario) async {
+  Future<void> _aplicarAutenticacao(
+    String novoToken,
+    Usuario novoUsuario,
+  ) async {
     token = novoToken;
     usuario = novoUsuario;
     status = AuthStatus.authenticated;

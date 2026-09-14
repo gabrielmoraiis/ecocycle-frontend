@@ -16,12 +16,19 @@ class ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: AppColors.verdeGradienteInicio, size: 48),
+            const Icon(
+              Icons.error_outline,
+              color: AppColors.verdeGradienteInicio,
+              size: 48,
+            ),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textoEscuro, fontSize: 14),
+              style: const TextStyle(
+                color: AppColors.textoEscuro,
+                fontSize: 14,
+              ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),

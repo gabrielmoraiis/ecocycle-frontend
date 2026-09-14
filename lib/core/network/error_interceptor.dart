@@ -14,7 +14,8 @@ class ErrorInterceptor extends Interceptor {
     final apiException = _mapear(err);
 
     final path = err.requestOptions.path;
-    final isRotaDeAuth = path.contains('/auth/login') || path.contains('/auth/register');
+    final isRotaDeAuth =
+        path.contains('/auth/login') || path.contains('/auth/register');
     if (apiException.isNaoAutorizado && !isRotaDeAuth) {
       onUnauthorized?.call();
     }
@@ -25,7 +26,8 @@ class ErrorInterceptor extends Interceptor {
   ApiException _mapear(DioException err) {
     final response = err.response;
     if (response == null) {
-      final isTimeout = err.type == DioExceptionType.connectionTimeout ||
+      final isTimeout =
+          err.type == DioExceptionType.connectionTimeout ||
           err.type == DioExceptionType.receiveTimeout ||
           err.type == DioExceptionType.sendTimeout;
       return ApiException(
@@ -42,7 +44,9 @@ class ErrorInterceptor extends Interceptor {
       return ApiException(
         status: (data['status'] as num?)?.toInt() ?? response.statusCode ?? 500,
         message: (data['message'] as String?) ?? 'Ocorreu um erro inesperado.',
-        errors: errorsRaw is List ? errorsRaw.map((e) => e.toString()).toList() : null,
+        errors: errorsRaw is List
+            ? errorsRaw.map((e) => e.toString()).toList()
+            : null,
       );
     }
 

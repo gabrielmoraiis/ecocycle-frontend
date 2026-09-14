@@ -12,10 +12,8 @@ import '../../core/providers/figurinhas_provider.dart';
 import '../../core/providers/progresso_provider.dart';
 import '../../core/services/scanner_service.dart';
 import '../../core/theme/app_colors.dart';
-import '../album/tela_album.dart';
+import '../../core/widgets/eco_bottom_nav_bar.dart';
 import '../album/tela_info_figurinha.dart';
-import '../aprender/tela_aprender.dart';
-import '../mapa/tela_mapa.dart';
 
 // Mapeia o código de cada figurinha do tipo SCAN para o identificador de
 // componente esperado pelo contrato da API (BATERIA_LITIO | PLACA_MAE | CABO_USB).
@@ -32,9 +30,8 @@ class TelaScanner extends StatefulWidget {
   State<TelaScanner> createState() => _TelaScannerState();
 }
 
-class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
-  final int _abaSelecionada = 3; // Scanner selecionado por padrão
-
+class _TelaScannerState extends State<TelaScanner>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   CameraController? _controladorCamera;
   Future<void>? _inicializacaoCamera;
   String? _erroCamera;
@@ -49,7 +46,10 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _pulsoController = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+    _pulsoController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
     _scannerService = ScannerService(context.read());
     _inicializarCamera();
   }
@@ -58,19 +58,28 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
     try {
       final List<CameraDescription> cameras = await availableCameras();
       if (cameras.isEmpty) {
-        setState(() => _erroCamera = 'Nenhuma câmera encontrada neste dispositivo.');
+        setState(
+          () => _erroCamera = 'Nenhuma câmera encontrada neste dispositivo.',
+        );
         return;
       }
       final CameraDescription camera = cameras.firstWhere(
         (c) => c.lensDirection == CameraLensDirection.back,
         orElse: () => cameras.first,
       );
-      final CameraController controlador = CameraController(camera, ResolutionPreset.medium, enableAudio: false);
+      final CameraController controlador = CameraController(
+        camera,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
       _controladorCamera = controlador;
       setState(() => _inicializacaoCamera = controlador.initialize());
       await _inicializacaoCamera;
     } catch (e) {
-      setState(() => _erroCamera = 'Não foi possível acessar a câmera. Verifique a permissão do app.');
+      setState(
+        () => _erroCamera =
+            'Não foi possível acessar a câmera. Verifique a permissão do app.',
+      );
     }
   }
 
@@ -79,7 +88,8 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
     final CameraController? controlador = _controladorCamera;
     if (controlador == null || !controlador.value.isInitialized) return;
 
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
       controlador.dispose();
       _controladorCamera = null;
     } else if (state == AppLifecycleState.resumed) {
@@ -117,7 +127,10 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.chevron_left, color: AppColors.verdeGradienteInicio),
+                        icon: const Icon(
+                          Icons.chevron_left,
+                          color: AppColors.verdeGradienteInicio,
+                        ),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ),
@@ -138,31 +151,15 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
             Expanded(child: _construirAreaCamera()),
 
             // --- STATUS + BOTÃO DE CAPTURA / PAINEL DE ERRO ---
-            _falhaIdentificacao ? _construirPainelErro() : _construirPainelEscaneando(),
+            _falhaIdentificacao
+                ? _construirPainelErro()
+                : _construirPainelEscaneando(),
           ],
         ),
       ),
 
       // --- BARRA DE NAVEGAÇÃO INFERIOR ---
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.fundoBranco,
-            border: Border(top: BorderSide(color: AppColors.bordaCinza, width: 1.0)),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _construirItemNavegacao(0, Icons.location_on_outlined, 'Mapa'),
-              _construirItemNavegacao(1, Icons.menu_book_outlined, 'Aprender'),
-              _construirItemNavegacao(2, Icons.home_outlined, 'Início'),
-              _construirItemNavegacao(3, Icons.camera_alt_outlined, 'Scanner'),
-              _construirItemNavegacao(4, Icons.check_circle_outline, 'Álbum'),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: const EcoBottomNavBar(tabAtual: EcoTab.scanner),
     );
   }
 
@@ -178,7 +175,11 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.videocam_off_outlined, color: Colors.white54, size: 48),
+              const Icon(
+                Icons.videocam_off_outlined,
+                color: Colors.white54,
+                size: 48,
+              ),
               const SizedBox(height: 16),
               Text(
                 _erroCamera!,
@@ -198,7 +199,9 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
           future: _inicializacaoCamera,
           builder: (context, snapshot) {
             final CameraController? controlador = _controladorCamera;
-            if (snapshot.connectionState == ConnectionState.done && controlador != null && controlador.value.isInitialized) {
+            if (snapshot.connectionState == ConnectionState.done &&
+                controlador != null &&
+                controlador.value.isInitialized) {
               return ClipRect(
                 child: OverflowBox(
                   alignment: Alignment.center,
@@ -213,7 +216,11 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
                 ),
               );
             }
-            return const Center(child: CircularProgressIndicator(color: AppColors.destaqueVerdeClaro));
+            return const Center(
+              child: CircularProgressIndicator(
+                color: AppColors.destaqueVerdeClaro,
+              ),
+            );
           },
         ),
         if (_falhaIdentificacao)
@@ -225,7 +232,11 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2.5),
               ),
-              child: const Icon(Icons.priority_high_rounded, color: Colors.white, size: 32),
+              child: const Icon(
+                Icons.priority_high_rounded,
+                color: Colors.white,
+                size: 32,
+              ),
             ),
           )
         else ...[
@@ -243,7 +254,11 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
             child: Text(
               'Centralize o aparelho no quadrado',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
             ),
           ),
         ],
@@ -296,9 +311,16 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
               child: _processando
                   ? const Padding(
                       padding: EdgeInsets.all(24),
-                      child: CircularProgressIndicator(color: AppColors.fundoBranco, strokeWidth: 3),
+                      child: CircularProgressIndicator(
+                        color: AppColors.fundoBranco,
+                        strokeWidth: 3,
+                      ),
                     )
-                  : const Icon(Icons.camera_alt, color: AppColors.fundoBranco, size: 30),
+                  : const Icon(
+                      Icons.camera_alt,
+                      color: AppColors.fundoBranco,
+                      size: 30,
+                    ),
             ),
           ),
         ],
@@ -326,12 +348,20 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
               children: [
                 Text(
                   'Não conseguimos identificar o aparelho',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.red.shade700),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Tente aproximar mais a câmera ou melhore a iluminação do ambiente.',
-                  style: TextStyle(fontSize: 13, color: Colors.red.shade400, height: 1.3),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.red.shade400,
+                    height: 1.3,
+                  ),
                 ),
               ],
             ),
@@ -345,10 +375,15 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
                 backgroundColor: AppColors.verdeGradienteInicio,
                 foregroundColor: AppColors.fundoBranco,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 0,
               ),
-              child: const Text('Tentar novamente', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Tentar novamente',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -361,9 +396,14 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
                 backgroundColor: AppColors.fundoBranco,
                 side: const BorderSide(color: AppColors.bordaVerdeClara),
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-              child: const Text('Buscar manualmente por nome', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Buscar manualmente por nome',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -383,13 +423,17 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
     if (!mounted) return;
 
     final identificadores = _identificadorPorCodigo.values.toList();
-    final identificador = identificadores[_sorteio.nextInt(identificadores.length)];
+    final identificador =
+        identificadores[_sorteio.nextInt(identificadores.length)];
     // Tendencioso para acima do limiar de 60% definido pelo contrato, preservando
     // a sensação de "geralmente funciona" que a simulação original tinha.
     final confianca = 45 + _sorteio.nextDouble() * 55;
 
     try {
-      final resultado = await _scannerService.reconhecer(identificador, confianca);
+      final resultado = await _scannerService.reconhecer(
+        identificador,
+        confianca,
+      );
 
       if (!mounted) return;
 
@@ -409,12 +453,17 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
       setState(() => _processando = false);
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => TelaInfoFigurinha(figurinha: resultado.figurinha!)),
+        MaterialPageRoute(
+          builder: (context) =>
+              TelaInfoFigurinha(figurinha: resultado.figurinha!),
+        ),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _processando = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 
@@ -428,7 +477,9 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.fundoBranco,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
         return SafeArea(
           child: Padding(
@@ -439,7 +490,11 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
               children: [
                 const Text(
                   'Buscar componente por nome',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textoEscuro),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textoEscuro,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 if (bloqueadas.isEmpty)
@@ -452,23 +507,34 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
                   )
                 else
                   for (final figurinha in bloqueadas)
-                    Builder(builder: (context) {
-                      final apresentacao = apresentacaoDaFigurinha(figurinha.codigo);
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: apresentacao.corFundo, borderRadius: BorderRadius.circular(10)),
-                          child: Icon(apresentacao.icone, color: apresentacao.corIcone, size: 20),
-                        ),
-                        title: Text(
-                          'Componente ${figurinha.codigo}',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        onTap: () => _selecionarManualmente(figurinha),
-                      );
-                    }),
+                    Builder(
+                      builder: (context) {
+                        final apresentacao = apresentacaoDaFigurinha(
+                          figurinha.codigo,
+                        );
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: apresentacao.corFundo,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              apresentacao.icone,
+                              color: apresentacao.corIcone,
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(
+                            'Componente ${figurinha.codigo}',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          onTap: () => _selecionarManualmente(figurinha),
+                        );
+                      },
+                    ),
               ],
             ),
           ),
@@ -493,55 +559,18 @@ class _TelaScannerState extends State<TelaScanner> with WidgetsBindingObserver, 
       if (resultado.figurinha != null) {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => TelaInfoFigurinha(figurinha: resultado.figurinha!)),
+          MaterialPageRoute(
+            builder: (context) =>
+                TelaInfoFigurinha(figurinha: resultado.figurinha!),
+          ),
         );
       }
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     }
-  }
-
-  void _abrirAlbum(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const TelaAlbum()));
-  }
-
-  Widget _construirItemNavegacao(int indice, IconData icone, String rotulo) {
-    final bool selecionado = _abaSelecionada == indice;
-    final Color cor = selecionado ? AppColors.verdeGradienteInicio : AppColors.textoCinzaClaro;
-
-    return GestureDetector(
-      onTap: () {
-        if (indice == _abaSelecionada) return;
-        if (indice == 2) {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        } else if (indice == 4) {
-          _abrirAlbum(context);
-        } else if (indice == 0) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const TelaMapa()));
-        } else if (indice == 1) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const TelaAprender()));
-        }
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icone, color: cor, size: 24),
-          const SizedBox(height: 4),
-          Text(rotulo, style: TextStyle(fontSize: 11, color: cor, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
-          Container(
-            width: 4,
-            height: 4,
-            decoration: BoxDecoration(
-              color: selecionado ? AppColors.verdeGradienteInicio : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

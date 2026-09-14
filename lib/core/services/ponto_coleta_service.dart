@@ -10,11 +10,10 @@ class PontoColetaService {
 
   Future<List<PontoColeta>> listar({double? lat, double? lng, double? raioKm}) {
     return runApiCall(() async {
-      final response = await _dio.get('/pontos-coleta', queryParameters: {
-        'lat': ?lat,
-        'lng': ?lng,
-        'raioKm': ?raioKm,
-      });
+      final response = await _dio.get(
+        '/pontos-coleta',
+        queryParameters: {'lat': ?lat, 'lng': ?lng, 'raioKm': ?raioKm},
+      );
       return (response.data['data'] as List)
           .map((p) => PontoColeta.fromJson(p as Map<String, dynamic>))
           .toList();
@@ -24,7 +23,9 @@ class PontoColetaService {
   Future<PontoColeta> buscarPorId(int id) {
     return runApiCall(() async {
       final response = await _dio.get('/pontos-coleta/$id');
-      return PontoColeta.fromJson(response.data['data'] as Map<String, dynamic>);
+      return PontoColeta.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
     });
   }
 }

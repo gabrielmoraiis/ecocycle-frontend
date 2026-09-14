@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/data/figurinha_presentation_catalog.dart';
 import '../../core/models/figurinha.dart';
 import '../../core/theme/app_colors.dart';
-import '../aprender/tela_aprender.dart';
-import '../mapa/tela_mapa.dart';
-import '../scanner/tela_scanner.dart';
+import '../../core/widgets/eco_bottom_nav_bar.dart';
 
 class TelaInfoFigurinha extends StatefulWidget {
   final Figurinha figurinha;
@@ -17,8 +15,6 @@ class TelaInfoFigurinha extends StatefulWidget {
 }
 
 class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
-  final int _abaSelecionada = 4; // Álbum selecionado por padrão
-
   @override
   Widget build(BuildContext context) {
     final Figurinha figurinha = widget.figurinha;
@@ -37,7 +33,11 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left, color: AppColors.verdeGradienteInicio, size: 28),
+                    icon: const Icon(
+                      Icons.chevron_left,
+                      color: AppColors.verdeGradienteInicio,
+                      size: 28,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const Text(
@@ -75,7 +75,11 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
                               color: apresentacao.corFundo,
                               borderRadius: BorderRadius.circular(24),
                             ),
-                            child: Icon(apresentacao.icone, color: apresentacao.corIcone, size: 48),
+                            child: Icon(
+                              apresentacao.icone,
+                              color: apresentacao.corIcone,
+                              size: 48,
+                            ),
                           ),
                           const SizedBox(height: 20),
                           Text(
@@ -89,7 +93,10 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
                           ),
                           const SizedBox(height: 12),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: apresentacao.corBadgeFundo,
                               borderRadius: BorderRadius.circular(20),
@@ -108,8 +115,12 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
                     ),
                     const SizedBox(height: 20),
 
-                    if (figurinha.descricao != null && figurinha.descricao!.isNotEmpty) ...[
-                      _construirSecaoInfo(titulo: 'SOBRE', texto: figurinha.descricao!),
+                    if (figurinha.descricao != null &&
+                        figurinha.descricao!.isNotEmpty) ...[
+                      _construirSecaoInfo(
+                        titulo: 'SOBRE',
+                        texto: figurinha.descricao!,
+                      ),
                       const SizedBox(height: 16),
                     ],
 
@@ -148,7 +159,11 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          const Icon(Icons.info_outline, color: AppColors.textoCinzaClaro, size: 20),
+                          const Icon(
+                            Icons.info_outline,
+                            color: AppColors.textoCinzaClaro,
+                            size: 20,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -172,25 +187,7 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
       ),
 
       // --- BARRA DE NAVEGAÇÃO INFERIOR ---
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.fundoBranco,
-            border: Border(top: BorderSide(color: AppColors.bordaCinza, width: 1.0)),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _construirItemNavegacao(0, Icons.location_on_outlined, 'Mapa'),
-              _construirItemNavegacao(1, Icons.menu_book_outlined, 'Aprender'),
-              _construirItemNavegacao(2, Icons.home_outlined, 'Início'),
-              _construirItemNavegacao(3, Icons.camera_alt_outlined, 'Scanner'),
-              _construirItemNavegacao(4, Icons.check_circle_outline, 'Álbum'),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: const EcoBottomNavBar(tabAtual: EcoTab.album),
     );
   }
 
@@ -230,53 +227,6 @@ class _TelaInfoFigurinhaState extends State<TelaInfoFigurinha> {
               fontSize: 14,
               color: AppColors.textoCinzaClaro,
               height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _construirItemNavegacao(int indice, IconData icone, String rotulo) {
-    final bool selecionado = _abaSelecionada == indice;
-    final Color cor = selecionado ? AppColors.verdeGradienteInicio : AppColors.textoCinzaClaro;
-
-    return GestureDetector(
-      onTap: () {
-        if (indice == _abaSelecionada) return;
-        if (indice == 1) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TelaAprender()),
-          );
-        } else if (indice == 0) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TelaMapa()),
-          );
-        } else if (indice == 3) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TelaScanner()),
-          );
-        } else {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        }
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icone, color: cor, size: 24),
-          const SizedBox(height: 4),
-          Text(rotulo, style: TextStyle(fontSize: 11, color: cor, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
-          Container(
-            width: 4,
-            height: 4,
-            decoration: BoxDecoration(
-              color: selecionado ? AppColors.verdeGradienteInicio : Colors.transparent,
-              shape: BoxShape.circle,
             ),
           ),
         ],

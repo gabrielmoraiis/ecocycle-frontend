@@ -170,10 +170,12 @@ class _TelaLoginState extends State<TelaLogin> {
                     icone: Icons.mail_outline,
                   ),
                   validator: (valor) {
-                    if (valor == null || valor.trim().isEmpty)
+                    if (valor == null || valor.trim().isEmpty) {
                       return 'Informe seu e-mail';
-                    if (!valor.contains('@') || !valor.contains('.'))
+                    }
+                    if (!valor.contains('@') || !valor.contains('.')) {
                       return 'E-mail inválido';
+                    }
                     return null;
                   },
                 ),
@@ -205,8 +207,9 @@ class _TelaLoginState extends State<TelaLogin> {
                         ),
                       ),
                   validator: (valor) {
-                    if (valor == null || valor.isEmpty)
+                    if (valor == null || valor.isEmpty) {
                       return 'Informe sua senha';
+                    }
                     return null;
                   },
                 ),

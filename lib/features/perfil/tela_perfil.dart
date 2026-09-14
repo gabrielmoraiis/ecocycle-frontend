@@ -38,7 +38,9 @@ class _TelaPerfilState extends State<TelaPerfil> {
       await context.read<SessionController>().atualizarAvatar(avatar);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) setState(() => _atualizandoAvatar = false);
     }
@@ -53,7 +55,10 @@ class _TelaPerfilState extends State<TelaPerfil> {
           'Tem certeza que deseja excluir sua conta? Essa ação não pode ser desfeita e você perderá o acesso ao seu progresso.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Excluir', style: TextStyle(color: Colors.red)),
@@ -76,7 +81,9 @@ class _TelaPerfilState extends State<TelaPerfil> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) setState(() => _excluindo = false);
     }
@@ -107,7 +114,10 @@ class _TelaPerfilState extends State<TelaPerfil> {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.chevron_left, color: AppColors.verdeGradienteInicio),
+                        icon: const Icon(
+                          Icons.chevron_left,
+                          color: AppColors.verdeGradienteInicio,
+                        ),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ),
@@ -125,7 +135,13 @@ class _TelaPerfilState extends State<TelaPerfil> {
             ),
 
             if (usuario == null)
-              const Expanded(child: Center(child: CircularProgressIndicator(color: AppColors.verdeGradienteInicio)))
+              const Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.verdeGradienteInicio,
+                  ),
+                ),
+              )
             else
               Expanded(
                 child: SingleChildScrollView(
@@ -147,12 +163,19 @@ class _TelaPerfilState extends State<TelaPerfil> {
                             const SizedBox(height: 16),
                             Text(
                               usuario.apelido,
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textoEscuro),
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textoEscuro,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               usuario.email,
-                              style: const TextStyle(fontSize: 14, color: AppColors.textoCinzaClaro),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textoCinzaClaro,
+                              ),
                             ),
                           ],
                         ),
@@ -161,18 +184,24 @@ class _TelaPerfilState extends State<TelaPerfil> {
 
                       const Text(
                         'ESCOLHA UM AVATAR',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textoCinzaClaro, letterSpacing: 1.0),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textoCinzaClaro,
+                          letterSpacing: 1.0,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: Avatar.values.length,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 5,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 5,
+                              mainAxisSpacing: 12,
+                              crossAxisSpacing: 12,
+                            ),
                         itemBuilder: (context, index) {
                           final avatar = Avatar.values[index];
                           final selecionado = avatar == usuario.avatar;
@@ -182,14 +211,25 @@ class _TelaPerfilState extends State<TelaPerfil> {
                               decoration: BoxDecoration(
                                 color: _coresAvatar[index],
                                 shape: BoxShape.circle,
-                                border: selecionado ? Border.all(color: AppColors.textoEscuro, width: 3) : null,
+                                border: selecionado
+                                    ? Border.all(
+                                        color: AppColors.textoEscuro,
+                                        width: 3,
+                                      )
+                                    : null,
                               ),
                               child: Center(
                                 child: selecionado
-                                    ? const Icon(Icons.check, color: Colors.white)
+                                    ? const Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                      )
                                     : Text(
                                         '${index + 1}',
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                               ),
                             ),
@@ -204,14 +244,28 @@ class _TelaPerfilState extends State<TelaPerfil> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.red,
+                                ),
                               )
-                            : const Icon(Icons.delete_outline, color: Colors.red),
-                        label: const Text('Excluir conta', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                            : const Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                              ),
+                        label: const Text(
+                          'Excluir conta',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 56),
                           side: const BorderSide(color: Colors.red),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
                         ),
                       ),
                     ],
@@ -229,7 +283,10 @@ class _TelaPerfilState extends State<TelaPerfil> {
     return Container(
       width: 88,
       height: 88,
-      decoration: BoxDecoration(color: _coresAvatar[index], shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: _coresAvatar[index],
+        shape: BoxShape.circle,
+      ),
       child: const Icon(Icons.person, color: Colors.white, size: 44),
     );
   }

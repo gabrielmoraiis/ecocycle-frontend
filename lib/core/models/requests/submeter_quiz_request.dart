@@ -5,9 +5,9 @@ class RespostaQuiz {
   const RespostaQuiz({required this.perguntaId, required this.alternativaId});
 
   Map<String, dynamic> toJson() => {
-        'perguntaId': perguntaId,
-        'alternativaId': alternativaId,
-      };
+    'perguntaId': perguntaId,
+    'alternativaId': alternativaId,
+  };
 }
 
 class SubmeterQuizRequest {
@@ -16,6 +16,6 @@ class SubmeterQuizRequest {
   const SubmeterQuizRequest({required this.respostas});
 
   Map<String, dynamic> toJson() => {
-        'respostas': respostas.map((r) => r.toJson()).toList(),
-      };
+    'respostas': respostas.map((r) => r.toJson()).toList(),
+  };
 }

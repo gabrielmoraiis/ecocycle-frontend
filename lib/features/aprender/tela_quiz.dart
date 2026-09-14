@@ -8,13 +8,9 @@ import '../../core/providers/figurinhas_provider.dart';
 import '../../core/providers/progresso_provider.dart';
 import '../../core/services/quiz_service.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/error_state.dart';
-import '../../core/widgets/loading_indicator.dart';
-import '../album/tela_album.dart';
-import '../mapa/tela_mapa.dart';
-import '../scanner/tela_scanner.dart';
+import '../../core/widgets/async_builder.dart';
+import '../../core/widgets/eco_bottom_nav_bar.dart';
 import 'cabecalho_modulo.dart';
-import 'tela_aprender.dart';
 import 'tela_conquista.dart';
 
 class TelaQuizModulo extends StatefulWidget {
@@ -34,13 +30,8 @@ class TelaQuizModulo extends StatefulWidget {
 }
 
 class _TelaQuizModuloState extends State<TelaQuizModulo> {
-  final int _abaSelecionada = 1; // Aprender selecionado por padrão
-
   late final QuizService _quizService;
-  bool _carregando = true;
   bool _enviando = false;
-  ApiException? _erro;
-  Quiz? _quiz;
 
   int _indicePergunta = 0;
   int? _alternativaSelecionada;
@@ -50,22 +41,6 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
   void initState() {
     super.initState();
     _quizService = QuizService(context.read());
-    _carregarQuiz();
-  }
-
-  Future<void> _carregarQuiz() async {
-    setState(() {
-      _carregando = true;
-      _erro = null;
-    });
-    try {
-      final quiz = await _quizService.buscarPorId(widget.quizId);
-      setState(() => _quiz = quiz);
-    } on ApiException catch (e) {
-      setState(() => _erro = e);
-    } finally {
-      if (mounted) setState(() => _carregando = false);
-    }
   }
 
   @override
@@ -90,7 +65,10 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.chevron_left, color: AppColors.verdeGradienteInicio),
+                        icon: const Icon(
+                          Icons.chevron_left,
+                          color: AppColors.verdeGradienteInicio,
+                        ),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ),
@@ -108,93 +86,96 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
             ),
 
             Expanded(
-              child: _carregando
-                  ? const LoadingIndicator()
-                  : _erro != null
-                      ? ErrorState(message: _erro!.message, onRetry: _carregarQuiz)
-                      : SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CabecalhoModulo(
-                                rotuloTrilha: widget.rotuloTrilha,
-                                titulo: widget.tituloQuiz,
-                                numeroAtual: _indicePergunta + 1,
-                                total: _quiz!.perguntas.length,
+              child: AsyncBuilder<Quiz>(
+                carregar: () => _quizService.buscarPorId(widget.quizId),
+                builder: (context, quiz, recarregar) => Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CabecalhoModulo(
+                              rotuloTrilha: widget.rotuloTrilha,
+                              titulo: widget.tituloQuiz,
+                              numeroAtual: _indicePergunta + 1,
+                              total: quiz.perguntas.length,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                24,
+                                24,
+                                24,
                               ),
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                                child: _construirPergunta(),
-                              ),
-                            ],
-                          ),
+                              child: _construirPergunta(quiz),
+                            ),
+                          ],
                         ),
-            ),
-
-            // --- BOTÃO FIXO: PRÓXIMA PERGUNTA / CONCLUIR ---
-            if (_quiz != null)
-              Container(
-                width: double.infinity,
-                color: AppColors.fundoBranco,
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: (_alternativaSelecionada == null || _enviando) ? null : _avancar,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.verdeGradienteInicio,
-                      foregroundColor: AppColors.fundoBranco,
-                      disabledBackgroundColor: AppColors.bordaVerdeClara,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
+                      ),
                     ),
-                    child: _enviando
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.fundoBranco),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                _indicePergunta == _quiz!.perguntas.length - 1
-                                    ? 'Concluir quiz'
-                                    : 'Próxima pergunta',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.chevron_right, size: 20),
-                            ],
+
+                    // --- BOTÃO FIXO: PRÓXIMA PERGUNTA / CONCLUIR ---
+                    Container(
+                      width: double.infinity,
+                      color: AppColors.fundoBranco,
+                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed:
+                              (_alternativaSelecionada == null || _enviando)
+                              ? null
+                              : () => _avancar(quiz),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.verdeGradienteInicio,
+                            foregroundColor: AppColors.fundoBranco,
+                            disabledBackgroundColor: AppColors.bordaVerdeClara,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
                           ),
-                  ),
+                          child: _enviando
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: AppColors.fundoBranco,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      _indicePergunta ==
+                                              quiz.perguntas.length - 1
+                                          ? 'Concluir quiz'
+                                          : 'Próxima pergunta',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.chevron_right, size: 20),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+            ),
           ],
         ),
       ),
 
       // --- BARRA DE NAVEGAÇÃO INFERIOR ---
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.fundoBranco,
-            border: Border(top: BorderSide(color: AppColors.bordaCinza, width: 1.0)),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _construirItemNavegacao(0, Icons.location_on_outlined, 'Mapa'),
-              _construirItemNavegacao(1, Icons.menu_book_outlined, 'Aprender'),
-              _construirItemNavegacao(2, Icons.home_outlined, 'Início'),
-              _construirItemNavegacao(3, Icons.camera_alt_outlined, 'Scanner'),
-              _construirItemNavegacao(4, Icons.check_circle_outline, 'Álbum'),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: const EcoBottomNavBar(tabAtual: EcoTab.aprender),
     );
   }
 
@@ -204,11 +185,11 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
     setState(() => _alternativaSelecionada = alternativaId);
   }
 
-  Future<void> _avancar() async {
-    final pergunta = _quiz!.perguntas[_indicePergunta];
+  Future<void> _avancar(Quiz quiz) async {
+    final pergunta = quiz.perguntas[_indicePergunta];
     _respostas[pergunta.id] = _alternativaSelecionada!;
 
-    if (_indicePergunta == _quiz!.perguntas.length - 1) {
+    if (_indicePergunta == quiz.perguntas.length - 1) {
       await _submeter();
     } else {
       setState(() {
@@ -232,20 +213,22 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => TelaConquista(resultado: resultado)),
+        MaterialPageRoute(
+          builder: (context) => TelaConquista(resultado: resultado),
+        ),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
   }
 
-  Widget _construirPergunta() {
-    final Pergunta pergunta = _quiz!.perguntas[_indicePergunta];
+  Widget _construirPergunta(Quiz quiz) {
+    final Pergunta pergunta = quiz.perguntas[_indicePergunta];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,9 +268,15 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
   Widget _construirOpcao(Alternativa alternativa) {
     final bool ehSelecionada = alternativa.id == _alternativaSelecionada;
 
-    final Color corFundo = ehSelecionada ? AppColors.verdeClaroFundo : AppColors.fundoBranco;
-    final Color corBorda = ehSelecionada ? AppColors.verdeGradienteInicio : AppColors.bordaVerdeClara;
-    final Color corTexto = ehSelecionada ? AppColors.verdeEscuroTexto : AppColors.textoEscuro;
+    final Color corFundo = ehSelecionada
+        ? AppColors.verdeClaroFundo
+        : AppColors.fundoBranco;
+    final Color corBorda = ehSelecionada
+        ? AppColors.verdeGradienteInicio
+        : AppColors.bordaVerdeClara;
+    final Color corTexto = ehSelecionada
+        ? AppColors.verdeEscuroTexto
+        : AppColors.textoEscuro;
 
     return GestureDetector(
       onTap: () => _selecionarResposta(alternativa.id),
@@ -308,61 +297,14 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
             Text(
               alternativa.texto,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: corTexto),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: corTexto,
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _abrirAlbum(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const TelaAlbum()),
-    );
-  }
-
-  Widget _construirItemNavegacao(int indice, IconData icone, String rotulo) {
-    final bool selecionado = _abaSelecionada == indice;
-    final Color cor = selecionado ? AppColors.verdeGradienteInicio : AppColors.textoCinzaClaro;
-
-    return GestureDetector(
-      onTap: () {
-        if (indice == _abaSelecionada) return;
-        if (indice == 2) {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        } else if (indice == 4) {
-          _abrirAlbum(context);
-        } else if (indice == 0) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const TelaMapa()));
-        } else if (indice == 3) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const TelaScanner()));
-        } else if (indice == 1) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const TelaAprender()),
-            (route) => route.isFirst,
-          );
-        }
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icone, color: cor, size: 24),
-          const SizedBox(height: 4),
-          Text(rotulo, style: TextStyle(fontSize: 11, color: cor, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
-          Container(
-            width: 4,
-            height: 4,
-            decoration: BoxDecoration(
-              color: selecionado ? AppColors.verdeGradienteInicio : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -24,10 +24,7 @@ class CabecalhoModulo extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.verdeGradienteInicio,
-            AppColors.verdeGradienteFim,
-          ],
+          colors: [AppColors.verdeGradienteInicio, AppColors.verdeGradienteFim],
         ),
       ),
       child: Column(
@@ -72,8 +69,8 @@ class CabecalhoModulo extends StatelessWidget {
                 color: i < indiceAtual
                     ? AppColors.destaqueVerdeClaro
                     : i == indiceAtual
-                        ? AppColors.fundoBranco
-                        : AppColors.branco20,
+                    ? AppColors.fundoBranco
+                    : AppColors.branco20,
               ),
             ),
           ),

@@ -3,7 +3,11 @@ class Alternativa {
   final String letra;
   final String texto;
 
-  const Alternativa({required this.id, required this.letra, required this.texto});
+  const Alternativa({
+    required this.id,
+    required this.letra,
+    required this.texto,
+  });
 
   factory Alternativa.fromJson(Map<String, dynamic> json) {
     return Alternativa(

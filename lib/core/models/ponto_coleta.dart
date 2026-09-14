@@ -26,7 +26,9 @@ class PontoColeta {
       endereco: json['endereco'] as String,
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
-      tiposResiduoAceitos: (json['tiposResiduoAceitos'] as List).map((e) => e.toString()).toList(),
+      tiposResiduoAceitos: (json['tiposResiduoAceitos'] as List)
+          .map((e) => e.toString())
+          .toList(),
       horarioFuncionamento: json['horarioFuncionamento'] as String,
       distanciaKm: (json['distanciaKm'] as num?)?.toDouble(),
     );

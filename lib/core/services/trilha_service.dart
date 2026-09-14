@@ -21,14 +21,18 @@ class TrilhaService {
   Future<ConteudoEducativo> buscarConteudo(int id) {
     return runApiCall(() async {
       final response = await _dio.get('/conteudos/$id');
-      return ConteudoEducativo.fromJson(response.data['data'] as Map<String, dynamic>);
+      return ConteudoEducativo.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
     });
   }
 
   Future<ConteudoEducativo> marcarLido(int id) {
     return runApiCall(() async {
       final response = await _dio.post('/conteudos/$id/marcar-lido');
-      return ConteudoEducativo.fromJson(response.data['data'] as Map<String, dynamic>);
+      return ConteudoEducativo.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
     });
   }
 }

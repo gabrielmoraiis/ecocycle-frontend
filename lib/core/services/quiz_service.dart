@@ -30,7 +30,9 @@ class QuizService {
         '/quizzes/$id/submeter',
         data: SubmeterQuizRequest(respostas: respostas).toJson(),
       );
-      return ResultadoSubmissao.fromJson(response.data['data'] as Map<String, dynamic>);
+      return ResultadoSubmissao.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
     });
   }
 }

@@ -24,7 +24,9 @@ class ResultadoScanner {
       identificadorComponente: json['identificadorComponente'] as String,
       confianca: (json['confianca'] as num).toDouble(),
       novaDesbloqueada: json['novaDesbloqueada'] as bool,
-      figurinha: figurinhaJson == null ? null : Figurinha.fromJson(figurinhaJson),
+      figurinha: figurinhaJson == null
+          ? null
+          : Figurinha.fromJson(figurinhaJson),
       mensagem: json['mensagem'] as String,
     );
   }

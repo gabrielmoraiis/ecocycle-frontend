@@ -1,23 +1,22 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/figurinha.dart';
+import '../models/trilha.dart';
 import '../network/api_exception.dart';
-import '../services/figurinha_service.dart';
+import '../services/trilha_service.dart';
 
-class FigurinhasProvider extends ChangeNotifier {
-  final FigurinhaService _service;
+/// Cacheia a lista de trilhas em nível de app (assim como Figurinhas e
+/// Progresso), evitando rebuscar da API toda vez que a tela Aprender é
+/// reaberta. `recarregar()` é chamado explicitamente depois de ações que
+/// mudam esse estado (ex.: concluir um conteúdo/quiz).
+class TrilhasProvider extends ChangeNotifier {
+  final TrilhaService _service;
 
-  FigurinhasProvider(this._service);
+  TrilhasProvider(this._service);
 
-  List<Figurinha> figurinhas = [];
+  List<Trilha> trilhas = [];
   bool isLoading = false;
   ApiException? erro;
   bool _carregouUmaVez = false;
-
-  List<Figurinha> get desbloqueadas =>
-      figurinhas.where((f) => f.desbloqueada).toList();
-  List<Figurinha> get bloqueadas =>
-      figurinhas.where((f) => !f.desbloqueada).toList();
 
   Future<void> carregar({bool forcar = false}) async {
     if (_carregouUmaVez && !forcar) return;
@@ -29,7 +28,7 @@ class FigurinhasProvider extends ChangeNotifier {
     erro = null;
     notifyListeners();
     try {
-      figurinhas = await _service.listar();
+      trilhas = await _service.listarTrilhas();
       _carregouUmaVez = true;
     } on ApiException catch (e) {
       erro = e;

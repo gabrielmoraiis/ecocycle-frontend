@@ -186,8 +186,9 @@ class _TelaCadastroState extends State<TelaCadastro> {
                   validator: (valor) {
                     final texto = valor?.trim() ?? '';
                     if (texto.isEmpty) return 'Informe seu e-mail';
-                    if (!texto.contains('@') || !texto.contains('.'))
+                    if (!texto.contains('@') || !texto.contains('.')) {
                       return 'E-mail inválido';
+                    }
                     return null;
                   },
                 ),

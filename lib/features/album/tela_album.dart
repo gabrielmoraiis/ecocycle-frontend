@@ -5,11 +5,9 @@ import '../../core/data/figurinha_presentation_catalog.dart';
 import '../../core/models/figurinha.dart';
 import '../../core/providers/figurinhas_provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/eco_bottom_nav_bar.dart';
 import '../../core/widgets/error_state.dart';
 import '../../core/widgets/loading_indicator.dart';
-import '../aprender/tela_aprender.dart';
-import '../mapa/tela_mapa.dart';
-import '../scanner/tela_scanner.dart';
 import 'tela_info_figurinha.dart';
 
 class TelaAlbum extends StatefulWidget {
@@ -20,8 +18,6 @@ class TelaAlbum extends StatefulWidget {
 }
 
 class _TelaAlbumState extends State<TelaAlbum> {
-  int _abaSelecionada = 4; // Álbum selecionado por padrão
-
   @override
   void initState() {
     super.initState();
@@ -40,33 +36,15 @@ class _TelaAlbumState extends State<TelaAlbum> {
         child: provider.isLoading && provider.figurinhas.isEmpty
             ? const LoadingIndicator()
             : provider.erro != null && provider.figurinhas.isEmpty
-                ? ErrorState(
-                    message: provider.erro!.message,
-                    onRetry: () => context.read<FigurinhasProvider>().recarregar(),
-                  )
-                : _construirConteudo(provider),
+            ? ErrorState(
+                message: provider.erro!.message,
+                onRetry: () => context.read<FigurinhasProvider>().recarregar(),
+              )
+            : _construirConteudo(provider),
       ),
 
       // --- BARRA DE NAVEGAÇÃO INFERIOR ---
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.fundoBranco,
-            border: Border(top: BorderSide(color: AppColors.bordaCinza, width: 1.0)),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _construirItemNavegacao(0, Icons.location_on_outlined, 'Mapa'),
-              _construirItemNavegacao(1, Icons.menu_book_outlined, 'Aprender'),
-              _construirItemNavegacao(2, Icons.home_outlined, 'Início'),
-              _construirItemNavegacao(3, Icons.camera_alt_outlined, 'Scanner'),
-              _construirItemNavegacao(4, Icons.check_circle_outline, 'Álbum'),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: const EcoBottomNavBar(tabAtual: EcoTab.album),
     );
   }
 
@@ -100,13 +78,18 @@ class _TelaAlbumState extends State<TelaAlbum> {
                         TextSpan(text: 'Eco'),
                         TextSpan(
                           text: 'Cycle',
-                          style: TextStyle(color: AppColors.verdeGradienteInicio),
+                          style: TextStyle(
+                            color: AppColors.verdeGradienteInicio,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.verdeClaroFundo,
                       borderRadius: BorderRadius.circular(30),
@@ -167,7 +150,9 @@ class _TelaAlbumState extends State<TelaAlbum> {
                       value: progresso,
                       minHeight: 10,
                       backgroundColor: AppColors.branco20,
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.destaqueVerdeClaro),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.destaqueVerdeClaro,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -176,7 +161,10 @@ class _TelaAlbumState extends State<TelaAlbum> {
                     children: [
                       Text(
                         '${desbloqueadas.length} desbloqueados',
-                        style: const TextStyle(color: AppColors.branco70, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppColors.branco70,
+                          fontSize: 13,
+                        ),
                       ),
                       Text(
                         '${(progresso * 100).round()}%',
@@ -204,12 +192,13 @@ class _TelaAlbumState extends State<TelaAlbum> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: desbloqueadas.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 0.78,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 0.78,
+                        ),
                     itemBuilder: (context, index) {
                       return _construirCartaoDesbloqueado(desbloqueadas[index]);
                     },
@@ -223,13 +212,15 @@ class _TelaAlbumState extends State<TelaAlbum> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: bloqueadas.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 0.78,
-                    ),
-                    itemBuilder: (context, index) => _construirCartaoBloqueado(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 0.78,
+                        ),
+                    itemBuilder: (context, index) =>
+                        _construirCartaoBloqueado(),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -269,76 +260,88 @@ class _TelaAlbumState extends State<TelaAlbum> {
     return GestureDetector(
       onTap: () => _abrirInfoFigurinha(figurinha),
       child: Container(
-      decoration: BoxDecoration(
-        color: AppColors.fundoBranco,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.bordaVerdeClara),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: apresentacao.corFundo,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: apresentacao.corBadgeFundo,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        apresentacao.raridade,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: apresentacao.corBadgeTexto,
+        decoration: BoxDecoration(
+          color: AppColors.fundoBranco,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.bordaVerdeClara),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: apresentacao.corFundo,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: apresentacao.corBadgeFundo,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          apresentacao.raridade,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: apresentacao.corBadgeTexto,
+                          ),
                         ),
                       ),
                     ),
+                    Center(
+                      child: Icon(
+                        apresentacao.icone,
+                        color: apresentacao.corIcone,
+                        size: 36,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    figurinha.nome ?? '',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textoEscuro,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  Center(
-                    child: Icon(apresentacao.icone, color: apresentacao.corIcone, size: 36),
+                  const SizedBox(height: 2),
+                  Text(
+                    figurinha.descricao ?? '',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textoCinzaClaro,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  figurinha.nome ?? '',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textoEscuro,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  figurinha.descricao ?? '',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textoCinzaClaro),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -366,55 +369,6 @@ class _TelaAlbumState extends State<TelaAlbum> {
           const Text(
             'Use o scanner',
             style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _construirItemNavegacao(int indice, IconData icone, String rotulo) {
-    final bool selecionado = _abaSelecionada == indice;
-    final Color cor = selecionado ? AppColors.verdeGradienteInicio : AppColors.textoCinzaClaro;
-
-    return GestureDetector(
-      onTap: () {
-        if (indice == _abaSelecionada) return;
-        if (indice == 2) {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        } else if (indice == 1) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TelaAprender()),
-          );
-        } else if (indice == 0) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TelaMapa()),
-          );
-        } else if (indice == 3) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TelaScanner()),
-          );
-        } else {
-          setState(() => _abaSelecionada = indice);
-        }
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icone, color: cor, size: 24),
-          const SizedBox(height: 4),
-          Text(rotulo, style: TextStyle(fontSize: 11, color: cor, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
-          Container(
-            width: 4,
-            height: 4,
-            decoration: BoxDecoration(
-              color: selecionado ? AppColors.verdeGradienteInicio : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
           ),
         ],
       ),
