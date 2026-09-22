@@ -36,12 +36,19 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- TODO: substitua pela sua chave do Google Maps SDK for Android
-             (console.cloud.google.com -> APIs & Services -> Credentials).
-             Sem uma chave válida o mapa aparece em branco/cinza. -->
+        <!-- Chave real vem de android/local.properties (MAPS_API_KEY=...),
+             que é gitignored — nunca commitar a chave aqui diretamente.
+             Passo a passo para gerar a chave:
+             1. console.cloud.google.com -> criar/selecionar um projeto
+             2. APIs & Services -> Library -> habilitar "Maps SDK for Android"
+             3. APIs & Services -> Credentials -> Create Credentials -> API key
+             4. (recomendado) restringir a chave a apps Android, usando o
+                applicationId "com.ecocycle.ecocycle" e o SHA-1 do keystore de debug
+                (obtido com: cd android && ./gradlew signingReport)
+             5. adicionar em android/local.properties: MAPS_API_KEY=sua_chave_aqui -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="SUA_CHAVE_GOOGLE_MAPS_AQUI" />
+            android:value="${mapsApiKey}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

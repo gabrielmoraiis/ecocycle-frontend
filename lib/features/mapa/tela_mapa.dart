@@ -36,6 +36,7 @@ class _TelaMapaState extends State<TelaMapa> {
   String _cepPesquisado = '06600-000';
   int _indicePontoSelecionado = 0;
   bool _buscandoLocalizacao = false;
+  bool _painelExpandido = false;
 
   bool _carregando = true;
   ApiException? _erro;
@@ -229,7 +230,9 @@ class _TelaMapaState extends State<TelaMapa> {
               ),
             ),
 
-            // --- MAPA ---
+            // --- MAPA + PAINEL DE PONTOS (painel flutua sobre o mapa como
+            // overlay: expandir/recolher não redimensiona o GoogleMap, que é
+            // caro para relayoutar a cada frame da animação) ---
             Expanded(
               child: _carregando
                   ? const LoadingIndicator()
@@ -272,7 +275,7 @@ class _TelaMapaState extends State<TelaMapa> {
                         ),
                         Positioned(
                           right: 16,
-                          bottom: 16,
+                          bottom: 96,
                           child: FloatingActionButton(
                             heroTag: 'localizacaoAtual',
                             backgroundColor: AppColors.fundoBranco,
@@ -292,121 +295,186 @@ class _TelaMapaState extends State<TelaMapa> {
                                 : const Icon(Icons.my_location),
                           ),
                         ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: double.infinity,
+                            decoration: const BoxDecoration(
+                              color: AppColors.fundoBranco,
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(24),
+                                topRight: Radius.circular(24),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0x14000000),
+                                  blurRadius: 12,
+                                  offset: Offset(0, -4),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () => setState(
+                                    () => _painelExpandido = !_painelExpandido,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Center(
+                                        child: Container(
+                                          width: 40,
+                                          height: 4,
+                                          margin: const EdgeInsets.only(
+                                            bottom: 16,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.bordaVerdeClara,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            '${pontos.length} ponto${pontos.length == 1 ? '' : 's'} encontrado${pontos.length == 1 ? '' : 's'}',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.textoEscuro,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              'próximos a $_cepPesquisado',
+                                              textAlign: TextAlign.right,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                color:
+                                                    AppColors.textoCinzaClaro,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          AnimatedRotation(
+                                            turns: _painelExpandido ? 0.5 : 0,
+                                            duration: const Duration(
+                                              milliseconds: 200,
+                                            ),
+                                            child: const Icon(
+                                              Icons.keyboard_arrow_up,
+                                              color: AppColors.textoCinzaClaro,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                AnimatedCrossFade(
+                                  duration: const Duration(milliseconds: 220),
+                                  sizeCurve: Curves.easeInOut,
+                                  crossFadeState: _painelExpandido
+                                      ? CrossFadeState.showSecond
+                                      : CrossFadeState.showFirst,
+                                  firstChild: const SizedBox(
+                                    width: double.infinity,
+                                  ),
+                                  secondChild: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const SizedBox(height: 12),
+                                      if (pontos.isEmpty)
+                                        const Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: 24,
+                                          ),
+                                          child: Text(
+                                            'Nenhum ponto encontrado para esse filtro.',
+                                            style: TextStyle(
+                                              color: AppColors.textoCinzaClaro,
+                                            ),
+                                          ),
+                                        )
+                                      else ...[
+                                        SizedBox(
+                                          height: 108,
+                                          child: ListView.separated(
+                                            itemCount: pontos.length,
+                                            separatorBuilder:
+                                                (context, index) =>
+                                                    const SizedBox(height: 10),
+                                            itemBuilder: (context, index) =>
+                                                _construirCartaoPonto(
+                                                  pontos[index],
+                                                  index,
+                                                  indiceSelecionado,
+                                                ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton.icon(
+                                            onPressed: () => _abrirRota(
+                                              pontos[indiceSelecionado],
+                                            ),
+                                            icon: const Icon(
+                                              Icons.navigation_outlined,
+                                              size: 20,
+                                            ),
+                                            label: const Text(
+                                              'Como chegar',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppColors
+                                                  .verdeGradienteInicio,
+                                              foregroundColor:
+                                                  AppColors.fundoBranco,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 16,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              elevation: 0,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-            ),
-
-            // --- PAINEL DE PONTOS ENCONTRADOS ---
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: AppColors.fundoBranco,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x14000000),
-                    blurRadius: 12,
-                    offset: Offset(0, -4),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.bordaVerdeClara,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${pontos.length} ponto${pontos.length == 1 ? '' : 's'} encontrado${pontos.length == 1 ? '' : 's'}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textoEscuro,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'próximos a $_cepPesquisado',
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textoCinzaClaro,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (pontos.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Text(
-                        'Nenhum ponto encontrado para esse filtro.',
-                        style: TextStyle(color: AppColors.textoCinzaClaro),
-                      ),
-                    )
-                  else ...[
-                    SizedBox(
-                      height: 108,
-                      child: ListView.separated(
-                        itemCount: pontos.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 10),
-                        itemBuilder: (context, index) => _construirCartaoPonto(
-                          pontos[index],
-                          index,
-                          indiceSelecionado,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _abrirRota(pontos[indiceSelecionado]),
-                        icon: const Icon(Icons.navigation_outlined, size: 20),
-                        label: const Text(
-                          'Como chegar',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.verdeGradienteInicio,
-                          foregroundColor: AppColors.fundoBranco,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
             ),
           ],
         ),
       ),
-
       // --- BARRA DE NAVEGAÇÃO INFERIOR ---
       bottomNavigationBar: const EcoBottomNavBar(tabAtual: EcoTab.mapa),
     );

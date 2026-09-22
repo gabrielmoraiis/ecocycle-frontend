@@ -11,7 +11,7 @@ abstract class AppColors {
 
   static const Color bordaCinza = Color(0xFFF1F1E6);
   static const Color textoBranco = Color(0xFFEEEEEE);
-  static const Color textoCinzaClaro = Color(0xCCDDDBDB);
+  static const Color textoCinzaClaro = Color(0xFF757575);
   static const Color branco20 = Color(0x33FFFFFF);
   static const Color branco50 = Color(0x80FFFFFF);
   static const Color branco70 = Color(0xB3FFFFFF);

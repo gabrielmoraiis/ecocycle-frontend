@@ -126,7 +126,7 @@ class TelaInicialEcoCycle extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 16,
-                        color: AppColors.textoCinzaClaro,
+                        color: AppColors.branco70,
                         height: 1.4,
                       ),
                     ),
@@ -197,10 +197,7 @@ class TelaInicialEcoCycle extends StatelessWidget {
                     const Text(
                       'Sem spam - Seus dados protegidos',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textoCinzaClaro,
-                      ),
+                      style: TextStyle(fontSize: 12, color: AppColors.branco70),
                     ),
                   ],
                 ),
