@@ -1,10 +1,9 @@
-import 'dart:math';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/data/figurinha_presentation_catalog.dart';
+import '../../core/ia/classificador_componente.dart';
 import '../../core/models/figurinha.dart';
 import '../../core/models/identificador_componente.dart';
 import '../../core/network/api_exception.dart';
@@ -15,13 +14,12 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/eco_bottom_nav_bar.dart';
 import '../album/tela_info_figurinha.dart';
 
-// Mapeia o código de cada figurinha do tipo SCAN para o identificador de
-// componente esperado pelo contrato da API (BATERIA_LITIO | PLACA_MAE | CABO_USB).
-const Map<String, IdentificadorComponente> _identificadorPorCodigo = {
-  'FIG-08': IdentificadorComponente.bateriaLitio,
-  'FIG-09': IdentificadorComponente.placaMae,
-  'FIG-10': IdentificadorComponente.caboUsb,
-};
+const String _mensagemNaoIdentificado =
+    'Tente aproximar mais a câmera ou melhore a iluminação do ambiente.';
+const String _mensagemSemCamera =
+    'Não foi possível usar a câmera. Verifique a permissão do app ou busque o componente pelo nome.';
+const String _mensagemSemSuporte =
+    'O Scanner IA funciona apenas no app para celular. Busque o componente pelo nome.';
 
 class TelaScanner extends StatefulWidget {
   const TelaScanner({super.key});
@@ -37,8 +35,12 @@ class _TelaScannerState extends State<TelaScanner>
   String? _erroCamera;
   bool _processando = false;
   bool _falhaIdentificacao = false;
+  String _mensagemFalha = _mensagemNaoIdentificado;
+  bool _cameraPausada = false;
 
-  final Random _sorteio = Random();
+  // Carregado uma vez por tela; se falhar, o erro aparece na primeira captura.
+  Future<ClassificadorComponente>? _classificador;
+
   late final AnimationController _pulsoController;
   late final ScannerService _scannerService;
 
@@ -51,16 +53,25 @@ class _TelaScannerState extends State<TelaScanner>
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
     _scannerService = ScannerService(context.read());
+
+    if (!ClassificadorComponente.suportado) {
+      // Na web não há modelo: vai direto para a busca manual.
+      _erroCamera = 'Scanner IA indisponível no navegador.';
+      _falhaIdentificacao = true;
+      _mensagemFalha = _mensagemSemSuporte;
+      return;
+    }
+
+    _classificador = ClassificadorComponente.carregar()..ignore();
     _inicializarCamera();
   }
 
   Future<void> _inicializarCamera() async {
     try {
       final List<CameraDescription> cameras = await availableCameras();
+      if (!mounted) return;
       if (cameras.isEmpty) {
-        setState(
-          () => _erroCamera = 'Nenhuma câmera encontrada neste dispositivo.',
-        );
+        _mostrarFalhaCamera('Nenhuma câmera encontrada neste dispositivo.');
         return;
       }
       final CameraDescription camera = cameras.firstWhere(
@@ -76,23 +87,45 @@ class _TelaScannerState extends State<TelaScanner>
       setState(() => _inicializacaoCamera = controlador.initialize());
       await _inicializacaoCamera;
     } catch (e) {
-      setState(
-        () => _erroCamera =
-            'Não foi possível acessar a câmera. Verifique a permissão do app.',
+      if (!mounted) return;
+      _mostrarFalhaCamera(
+        'Não foi possível acessar a câmera. Verifique a permissão do app.',
       );
     }
   }
 
+  void _mostrarFalhaCamera(String erro) {
+    setState(() {
+      _erroCamera = erro;
+      _processando = false;
+      _falhaIdentificacao = true;
+      _mensagemFalha = _mensagemSemCamera;
+    });
+  }
+
+  void _mostrarFalha(String mensagem) {
+    setState(() {
+      _processando = false;
+      _falhaIdentificacao = true;
+      _mensagemFalha = mensagem;
+    });
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final CameraController? controlador = _controladorCamera;
-    if (controlador == null || !controlador.value.isInitialized) return;
-
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
+      final CameraController? controlador = _controladorCamera;
+      // Só libera uma câmera já pronta: durante a inicialização o app fica
+      // "inactive" enquanto o diálogo de permissão está aberto.
+      if (controlador == null || !controlador.value.isInitialized) return;
+      setState(() {
+        _controladorCamera = null;
+        _cameraPausada = true;
+      });
       controlador.dispose();
-      _controladorCamera = null;
-    } else if (state == AppLifecycleState.resumed) {
+    } else if (state == AppLifecycleState.resumed && _cameraPausada) {
+      _cameraPausada = false;
       _inicializarCamera();
     }
   }
@@ -102,6 +135,7 @@ class _TelaScannerState extends State<TelaScanner>
     WidgetsBinding.instance.removeObserver(this);
     _pulsoController.dispose();
     _controladorCamera?.dispose();
+    _classificador?.then((c) => c.fechar(), onError: (_) {});
     super.dispose();
   }
 
@@ -356,7 +390,7 @@ class _TelaScannerState extends State<TelaScanner>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Tente aproximar mais a câmera ou melhore a iluminação do ambiente.',
+                  _mensagemFalha,
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.red.shade400,
@@ -367,26 +401,28 @@ class _TelaScannerState extends State<TelaScanner>
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _capturarEAnalisar,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.verdeGradienteInicio,
-                foregroundColor: AppColors.fundoBranco,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+          if (ClassificadorComponente.suportado) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _processando ? null : _tentarNovamente,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.verdeGradienteInicio,
+                  foregroundColor: AppColors.fundoBranco,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
                 ),
-                elevation: 0,
-              ),
-              child: const Text(
-                'Tentar novamente',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                child: const Text(
+                  'Tentar novamente',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
@@ -411,37 +447,58 @@ class _TelaScannerState extends State<TelaScanner>
     );
   }
 
+  void _tentarNovamente() {
+    final CameraController? controlador = _controladorCamera;
+    if (controlador != null && controlador.value.isInitialized) {
+      _capturarEAnalisar();
+      return;
+    }
+    // A câmera falhou antes: tenta abri-la de novo em vez de capturar.
+    setState(() {
+      _erroCamera = null;
+      _falhaIdentificacao = false;
+    });
+    _inicializarCamera();
+  }
+
   Future<void> _capturarEAnalisar() async {
     setState(() {
       _processando = true;
       _falhaIdentificacao = false;
     });
 
-    // A imagem é analisada aqui, on-device (simulado); apenas o identificador
-    // e a confiança calculados são enviados ao back-end, conforme o contrato.
-    await Future.delayed(const Duration(milliseconds: 1400));
+    // A foto é analisada aqui, on-device; apenas o identificador e a confiança
+    // vão para o back-end, que decide se a leitura passa do limiar.
+    final ClassificacaoComponente classificacao;
+    try {
+      final CameraController? controlador = _controladorCamera;
+      final Future<ClassificadorComponente>? classificador = _classificador;
+      if (controlador == null ||
+          !controlador.value.isInitialized ||
+          classificador == null) {
+        throw StateError('Câmera ou modelo indisponível.');
+      }
+      final XFile foto = await controlador.takePicture();
+      final bytes = await foto.readAsBytes();
+      classificacao = await (await classificador).classificar(bytes);
+    } catch (e) {
+      debugPrint('Scanner IA: falha ao analisar a foto: $e');
+      if (!mounted) return;
+      _mostrarFalha(_mensagemNaoIdentificado);
+      return;
+    }
     if (!mounted) return;
-
-    final identificadores = _identificadorPorCodigo.values.toList();
-    final identificador =
-        identificadores[_sorteio.nextInt(identificadores.length)];
-    // Tendencioso para acima do limiar de 60% definido pelo contrato, preservando
-    // a sensação de "geralmente funciona" que a simulação original tinha.
-    final confianca = 45 + _sorteio.nextDouble() * 55;
 
     try {
       final resultado = await _scannerService.reconhecer(
-        identificador,
-        confianca,
+        classificacao.identificador,
+        classificacao.confianca,
       );
 
       if (!mounted) return;
 
       if (!resultado.reconhecido || resultado.figurinha == null) {
-        setState(() {
-          _processando = false;
-          _falhaIdentificacao = true;
-        });
+        _mostrarFalha(_mensagemNaoIdentificado);
         return;
       }
 
@@ -528,7 +585,11 @@ class _TelaScannerState extends State<TelaScanner>
                             ),
                           ),
                           title: Text(
-                            'Componente ${figurinha.codigo}',
+                            figurinha.nome ??
+                                IdentificadorComponente.daFigurinha(
+                                  figurinha.codigo,
+                                )?.rotulo ??
+                                'Componente ${figurinha.codigo}',
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           onTap: () => _selecionarManualmente(figurinha),
@@ -544,14 +605,17 @@ class _TelaScannerState extends State<TelaScanner>
   }
 
   Future<void> _selecionarManualmente(Figurinha figurinha) async {
-    final identificador = _identificadorPorCodigo[figurinha.codigo];
+    final identificador = IdentificadorComponente.daFigurinha(
+      figurinha.codigo,
+    );
     Navigator.pop(context); // fecha o bottom sheet
     if (identificador == null) return;
 
     try {
       final resultado = await _scannerService.reconhecer(identificador, 100);
       if (!mounted) return;
-      setState(() => _falhaIdentificacao = false);
+      // Sem câmera (ou na web) o painel de falha continua sendo a saída.
+      if (_erroCamera == null) setState(() => _falhaIdentificacao = false);
       if (resultado.novaDesbloqueada) {
         context.read<FigurinhasProvider>().recarregar();
         context.read<ProgressoProvider>().recarregar();

@@ -142,49 +142,49 @@ const Map<String, FigurinhaApresentacao> _catalogo = {
     comoDesbloquear: 'Concluindo o quiz sobre onde e como descartar.',
   ),
   'FIG-08': FigurinhaApresentacao(
-    icone: Icons.battery_full_outlined,
+    icone: Icons.battery_std_outlined,
     raridade: 'RARO',
     corFundo: Color(0xFFFBEFD2),
     corIcone: Colors.orange,
     corBadgeFundo: Color(0xFFFFE0B2),
     corBadgeTexto: Colors.orange,
     substanciasPresentes:
-        'Lítio, cobalto e manganês - metais tóxicos se descartados incorretamente.',
+        'Zinco e manganês e, em alguns modelos, mercúrio, cádmio ou chumbo.',
     riscoAmbiental:
-        'Contamina solo e lençol freático; pode causar incêndios em aterros sanitários.',
+        'Ao se romper, vaza metais pesados que contaminam o solo e o lençol freático.',
     descarteCorreto:
-        'Leve ao ponto de coleta mais próximo. Nunca no lixo comum.',
-    comoDesbloquear: 'Escaneando uma bateria de lítio com o Scanner IA.',
+        'Guarde em um pote fechado e entregue em um ponto de coleta de pilhas. Nunca no lixo comum.',
+    comoDesbloquear: 'Escaneando uma pilha com o Scanner IA.',
   ),
   'FIG-09': FigurinhaApresentacao(
-    icone: Icons.developer_board,
+    icone: Icons.mouse_outlined,
     raridade: 'ÉPICO',
     corFundo: Color(0xFFE1F0E2),
     corIcone: AppColors.verdeGradienteInicio,
     corBadgeFundo: Color(0xFFC8E6C9),
     corBadgeTexto: AppColors.verdeEscuroTexto,
     substanciasPresentes:
-        'Chumbo, ouro e paládio - metais preciosos e tóxicos presentes nos circuitos.',
+        'Plástico, fios de cobre e uma pequena placa de circuito com solda de chumbo.',
     riscoAmbiental:
-        'Contamina solo e água. O chumbo é neurotóxico e persiste no ambiente por décadas.',
+        'A placa interna pode liberar chumbo no solo e na água; o plástico leva séculos para se decompor.',
     descarteCorreto:
-        'Leve a um ponto de coleta de eletrônicos ou cooperativa de reciclagem especializada.',
-    comoDesbloquear: 'Escaneando uma placa-mãe com o Scanner IA.',
+        'Retire as pilhas, se houver, e leve o mouse a um ponto de coleta de eletrônicos.',
+    comoDesbloquear: 'Escaneando um mouse com o Scanner IA.',
   ),
   'FIG-10': FigurinhaApresentacao(
-    icone: Icons.cable,
+    icone: Icons.iron_outlined,
     raridade: 'COMUM',
     corFundo: Color(0xFFFAD9E1),
     corIcone: Colors.pink,
     corBadgeFundo: Color(0xFFF8BBD0),
     corBadgeTexto: Colors.pink,
     substanciasPresentes:
-        'Cobre e PVC - metal reciclável envolto em plástico não biodegradável.',
+        'Aço, alumínio e cobre na base e na resistência, além de plásticos e fios revestidos.',
     riscoAmbiental:
-        'O PVC libera dioxinas tóxicas quando queimado incorretamente.',
+        'No lixo comum, desperdiça metais recicláveis e o plástico e o PVC dos fios poluem por décadas.',
     descarteCorreto:
-        'Separe o cobre do plástico em cooperativas de reciclagem, se possível.',
-    comoDesbloquear: 'Escaneando um cabo USB com o Scanner IA.',
+        'Leve a um ponto de coleta de eletroeletrônicos ou a uma assistência técnica que receba aparelhos.',
+    comoDesbloquear: 'Escaneando um ferro de passar com o Scanner IA.',
   ),
 };
 
