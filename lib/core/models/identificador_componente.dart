@@ -1,7 +1,7 @@
 enum IdentificadorComponente {
-  bateriaLitio('BATERIA_LITIO'),
-  placaMae('PLACA_MAE'),
-  caboUsb('CABO_USB');
+  ferroPassar('FERRO_PASSAR'),
+  mouse('MOUSE'),
+  pilha('PILHA');
 
   final String valor;
   const IdentificadorComponente(this.valor);

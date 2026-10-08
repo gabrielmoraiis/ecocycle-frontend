@@ -1,10 +1,10 @@
-import 'dart:math';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/data/figurinha_presentation_catalog.dart';
+import '../../core/ia/classificador_scanner.dart';
+import '../../core/ia/modelo_scanner.dart';
 import '../../core/models/figurinha.dart';
 import '../../core/models/identificador_componente.dart';
 import '../../core/network/api_exception.dart';
@@ -16,11 +16,11 @@ import '../../core/widgets/eco_bottom_nav_bar.dart';
 import '../album/tela_info_figurinha.dart';
 
 // Mapeia o código de cada figurinha do tipo SCAN para o identificador de
-// componente esperado pelo contrato da API (BATERIA_LITIO | PLACA_MAE | CABO_USB).
+// componente esperado pelo contrato da API (PILHA | MOUSE | FERRO_PASSAR).
 const Map<String, IdentificadorComponente> _identificadorPorCodigo = {
-  'FIG-08': IdentificadorComponente.bateriaLitio,
-  'FIG-09': IdentificadorComponente.placaMae,
-  'FIG-10': IdentificadorComponente.caboUsb,
+  'FIG-08': IdentificadorComponente.pilha,
+  'FIG-09': IdentificadorComponente.mouse,
+  'FIG-10': IdentificadorComponente.ferroPassar,
 };
 
 class TelaScanner extends StatefulWidget {
@@ -38,7 +38,7 @@ class _TelaScannerState extends State<TelaScanner>
   bool _processando = false;
   bool _falhaIdentificacao = false;
 
-  final Random _sorteio = Random();
+  late final Future<ClassificadorScanner> _carregamentoClassificador;
   late final AnimationController _pulsoController;
   late final ScannerService _scannerService;
 
@@ -51,6 +51,10 @@ class _TelaScannerState extends State<TelaScanner>
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
     _scannerService = ScannerService(context.read());
+    _carregamentoClassificador = carregarClassificadorScanner();
+    // Evita erro não tratado se o modelo falhar antes da primeira captura; a
+    // falha volta a aparecer (e é tratada) quando a captura aguarda o modelo.
+    _carregamentoClassificador.ignore();
     _inicializarCamera();
   }
 
@@ -102,6 +106,7 @@ class _TelaScannerState extends State<TelaScanner>
     WidgetsBinding.instance.removeObserver(this);
     _pulsoController.dispose();
     _controladorCamera?.dispose();
+    _carregamentoClassificador.then((c) => c.fechar(), onError: (_) {});
     super.dispose();
   }
 
@@ -412,27 +417,40 @@ class _TelaScannerState extends State<TelaScanner>
   }
 
   Future<void> _capturarEAnalisar() async {
+    final CameraController? controlador = _controladorCamera;
+    if (controlador == null ||
+        !controlador.value.isInitialized ||
+        controlador.value.isTakingPicture) {
+      return;
+    }
+
     setState(() {
       _processando = true;
       _falhaIdentificacao = false;
     });
 
-    // A imagem é analisada aqui, on-device (simulado); apenas o identificador
-    // e a confiança calculados são enviados ao back-end, conforme o contrato.
-    await Future.delayed(const Duration(milliseconds: 1400));
+    // A foto é analisada aqui, on-device; apenas o identificador e a confiança
+    // calculados são enviados ao back-end, que decide se atingiu o limiar.
+    final ResultadoClassificacao classificacao;
+    try {
+      final classificador = await _carregamentoClassificador;
+      final foto = await controlador.takePicture();
+      classificacao = await classificador.classificar(await foto.readAsBytes());
+    } catch (e) {
+      debugPrint('Falha ao analisar a foto no Scanner IA: $e');
+      if (!mounted) return;
+      setState(() {
+        _processando = false;
+        _falhaIdentificacao = true;
+      });
+      return;
+    }
     if (!mounted) return;
-
-    final identificadores = _identificadorPorCodigo.values.toList();
-    final identificador =
-        identificadores[_sorteio.nextInt(identificadores.length)];
-    // Tendencioso para acima do limiar de 60% definido pelo contrato, preservando
-    // a sensação de "geralmente funciona" que a simulação original tinha.
-    final confianca = 45 + _sorteio.nextDouble() * 55;
 
     try {
       final resultado = await _scannerService.reconhecer(
-        identificador,
-        confianca,
+        classificacao.identificador,
+        classificacao.confianca,
       );
 
       if (!mounted) return;

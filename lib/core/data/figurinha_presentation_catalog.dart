@@ -149,42 +149,42 @@ const Map<String, FigurinhaApresentacao> _catalogo = {
     corBadgeFundo: Color(0xFFFFE0B2),
     corBadgeTexto: Colors.orange,
     substanciasPresentes:
-        'Lítio, cobalto e manganês - metais tóxicos se descartados incorretamente.',
+        'Zinco e manganês; alguns tipos também têm níquel, cádmio ou lítio.',
     riscoAmbiental:
-        'Contamina solo e lençol freático; pode causar incêndios em aterros sanitários.',
+        'Com o tempo os metais vazam e contaminam o solo e o lençol freático.',
     descarteCorreto:
-        'Leve ao ponto de coleta mais próximo. Nunca no lixo comum.',
-    comoDesbloquear: 'Escaneando uma bateria de lítio com o Scanner IA.',
+        'Leve a um coletor de pilhas (muitos mercados e farmácias têm). Nunca no lixo comum.',
+    comoDesbloquear: 'Escaneando uma pilha com o Scanner IA.',
   ),
   'FIG-09': FigurinhaApresentacao(
-    icone: Icons.developer_board,
+    icone: Icons.mouse_outlined,
     raridade: 'ÉPICO',
     corFundo: Color(0xFFE1F0E2),
     corIcone: AppColors.verdeGradienteInicio,
     corBadgeFundo: Color(0xFFC8E6C9),
     corBadgeTexto: AppColors.verdeEscuroTexto,
     substanciasPresentes:
-        'Chumbo, ouro e paládio - metais preciosos e tóxicos presentes nos circuitos.',
+        'Placa de circuito com chumbo e cobre, plásticos e, no sem fio, pilhas ou bateria.',
     riscoAmbiental:
-        'Contamina solo e água. O chumbo é neurotóxico e persiste no ambiente por décadas.',
+        'Os metais da placa contaminam solo e água; o plástico leva séculos para se decompor.',
     descarteCorreto:
-        'Leve a um ponto de coleta de eletrônicos ou cooperativa de reciclagem especializada.',
-    comoDesbloquear: 'Escaneando uma placa-mãe com o Scanner IA.',
+        'Retire as pilhas e leve o mouse a um ponto de coleta de lixo eletrônico.',
+    comoDesbloquear: 'Escaneando um mouse com o Scanner IA.',
   ),
   'FIG-10': FigurinhaApresentacao(
-    icone: Icons.cable,
+    icone: Icons.iron_outlined,
     raridade: 'COMUM',
     corFundo: Color(0xFFFAD9E1),
     corIcone: Colors.pink,
     corBadgeFundo: Color(0xFFF8BBD0),
     corBadgeTexto: Colors.pink,
     substanciasPresentes:
-        'Cobre e PVC - metal reciclável envolto em plástico não biodegradável.',
+        'Base de alumínio ou aço, resistência metálica, fios de cobre e plástico.',
     riscoAmbiental:
-        'O PVC libera dioxinas tóxicas quando queimado incorretamente.',
+        'No lixo comum, os metais recicláveis se perdem e o plástico polui por décadas.',
     descarteCorreto:
-        'Separe o cobre do plástico em cooperativas de reciclagem, se possível.',
-    comoDesbloquear: 'Escaneando um cabo USB com o Scanner IA.',
+        'Leve a um ponto de coleta de eletroeletrônicos ou a uma assistência que faça logística reversa.',
+    comoDesbloquear: 'Escaneando um ferro de passar com o Scanner IA.',
   ),
 };
 
