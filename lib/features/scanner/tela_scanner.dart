@@ -1,6 +1,9 @@
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../../core/data/figurinha_presentation_catalog.dart';
 import '../../core/ia/classificador_componente.dart';
@@ -86,12 +89,21 @@ class _TelaScannerState extends State<TelaScanner>
       _controladorCamera = controlador;
       setState(() => _inicializacaoCamera = controlador.initialize());
       await _inicializacaoCamera;
-    } catch (e) {
+    } catch (e, pilha) {
+      _registrar('falha ao abrir a câmera: $e');
+      Sentry.captureException(e, stackTrace: pilha);
       if (!mounted) return;
       _mostrarFalhaCamera(
         'Não foi possível acessar a câmera. Verifique a permissão do app.',
       );
     }
+  }
+
+  // Vai para o console (adb logcat / flutter run) e fica como "breadcrumb"
+  // no Sentry, anexado ao próximo erro reportado.
+  void _registrar(String mensagem) {
+    debugPrint('Scanner IA: $mensagem');
+    Sentry.addBreadcrumb(Breadcrumb(message: mensagem, category: 'scanner'));
   }
 
   void _mostrarFalhaCamera(String erro) {
@@ -100,6 +112,14 @@ class _TelaScannerState extends State<TelaScanner>
       _processando = false;
       _falhaIdentificacao = true;
       _mensagemFalha = _mensagemSemCamera;
+    });
+  }
+
+  // Sem câmera, o painel de falha (busca manual) continua sendo a saída.
+  void _encerrarProcessamento() {
+    setState(() {
+      _processando = false;
+      _falhaIdentificacao = _erroCamera != null;
     });
   }
 
@@ -357,6 +377,7 @@ class _TelaScannerState extends State<TelaScanner>
                     ),
             ),
           ),
+          ..._botaoGaleriaDebug(),
         ],
       ),
     );
@@ -442,9 +463,27 @@ class _TelaScannerState extends State<TelaScanner>
               ),
             ),
           ),
+          ..._botaoGaleriaDebug(),
         ],
       ),
     );
+  }
+
+  List<Widget> _botaoGaleriaDebug() {
+    if (!kDebugMode || !ClassificadorComponente.suportado) return const [];
+    return [
+      const SizedBox(height: 8),
+      Center(
+        child: TextButton.icon(
+          onPressed: _processando ? null : _escolherDaGaleria,
+          icon: const Icon(Icons.photo_library_outlined, size: 18),
+          label: const Text('Escolher da galeria (debug)'),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.verdeGradienteInicio,
+          ),
+        ),
+      ),
+    ];
   }
 
   void _tentarNovamente() {
@@ -461,7 +500,22 @@ class _TelaScannerState extends State<TelaScanner>
     _inicializarCamera();
   }
 
-  Future<void> _capturarEAnalisar() async {
+  Future<void> _capturarEAnalisar() => _analisar(() {
+    final CameraController? controlador = _controladorCamera;
+    if (controlador == null || !controlador.value.isInitialized) {
+      throw StateError('Câmera indisponível.');
+    }
+    return controlador.takePicture();
+  });
+
+  // Só em debug: analisa uma foto da galeria, para testar o modelo no
+  // emulador sem câmera.
+  Future<void> _escolherDaGaleria() => _analisar(
+    () => ImagePicker().pickImage(source: ImageSource.gallery),
+  );
+
+  /// [obterFoto] devolve null quando o usuário desiste (ex.: fecha a galeria).
+  Future<void> _analisar(Future<XFile?> Function() obterFoto) async {
     setState(() {
       _processando = true;
       _falhaIdentificacao = false;
@@ -471,18 +525,22 @@ class _TelaScannerState extends State<TelaScanner>
     // vão para o back-end, que decide se a leitura passa do limiar.
     final ClassificacaoComponente classificacao;
     try {
-      final CameraController? controlador = _controladorCamera;
       final Future<ClassificadorComponente>? classificador = _classificador;
-      if (controlador == null ||
-          !controlador.value.isInitialized ||
-          classificador == null) {
-        throw StateError('Câmera ou modelo indisponível.');
+      if (classificador == null) throw StateError('Modelo indisponível.');
+      final XFile? foto = await obterFoto();
+      if (foto == null) {
+        if (mounted) _encerrarProcessamento();
+        return;
       }
-      final XFile foto = await controlador.takePicture();
       final bytes = await foto.readAsBytes();
       classificacao = await (await classificador).classificar(bytes);
-    } catch (e) {
-      debugPrint('Scanner IA: falha ao analisar a foto: $e');
+      _registrar(
+        '${classificacao.identificador.valor} '
+        '(${classificacao.confianca.toStringAsFixed(1)}%)',
+      );
+    } catch (e, pilha) {
+      _registrar('falha ao analisar a foto: $e');
+      Sentry.captureException(e, stackTrace: pilha);
       if (!mounted) return;
       _mostrarFalha(_mensagemNaoIdentificado);
       return;
@@ -498,6 +556,13 @@ class _TelaScannerState extends State<TelaScanner>
       if (!mounted) return;
 
       if (!resultado.reconhecido || resultado.figurinha == null) {
+        // Não é erro, mas ajuda a calibrar o limiar do back-end.
+        Sentry.captureMessage(
+          'Scanner IA: leitura recusada pelo back-end '
+          '(${classificacao.identificador.valor}, '
+          '${classificacao.confianca.toStringAsFixed(1)}%): '
+          '${resultado.mensagem}',
+        );
         _mostrarFalha(_mensagemNaoIdentificado);
         return;
       }
@@ -507,7 +572,7 @@ class _TelaScannerState extends State<TelaScanner>
         context.read<ProgressoProvider>().recarregar();
       }
 
-      setState(() => _processando = false);
+      _encerrarProcessamento();
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -515,9 +580,11 @@ class _TelaScannerState extends State<TelaScanner>
               TelaInfoFigurinha(figurinha: resultado.figurinha!),
         ),
       );
-    } on ApiException catch (e) {
+    } on ApiException catch (e, pilha) {
+      _registrar('erro na API do scanner: ${e.message}');
+      Sentry.captureException(e, stackTrace: pilha);
       if (!mounted) return;
-      setState(() => _processando = false);
+      _encerrarProcessamento();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
