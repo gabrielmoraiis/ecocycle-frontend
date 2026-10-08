@@ -1,0 +1,16 @@
+# Gera os ícones do app a partir de assets/branding/.
+# Depois de trocar as imagens, rode: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/branding/icone.png"
+  android: "launcher_icon"
+  # Android 8+: o launcher recorta o ícone (círculo, gota etc.), por isso o
+  # primeiro plano usa a versão com o símbolo dentro da zona segura.
+  adaptive_icon_background: "#C8E6C9"
+  adaptive_icon_foreground: "assets/branding/icone_adaptativo.png"
+  min_sdk_android: 21
+  ios: false
+  web:
+    generate: true
+    image_path: "assets/branding/icone.png"
+    background_color: "#C8E6C9"
+    theme_color: "#C8E6C9"

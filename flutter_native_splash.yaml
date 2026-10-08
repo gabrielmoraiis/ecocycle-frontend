@@ -1,0 +1,13 @@
+# Gera a splash nativa (exibida enquanto o Flutter inicializa).
+# Depois de trocar as imagens, rode: dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#C8E6C9"
+  image: assets/branding/splash.png
+  # Android 12+ não aceita imagem livre: mostra só um ícone recortado em
+  # círculo, então lá vai apenas o símbolo de reciclagem.
+  android_12:
+    color: "#C8E6C9"
+    image: assets/branding/splash_android12.png
+  android: true
+  ios: false
+  web: true
