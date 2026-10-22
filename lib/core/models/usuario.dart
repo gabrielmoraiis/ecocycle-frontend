@@ -13,6 +13,22 @@ enum Avatar {
   final String valor;
   const Avatar(this.valor);
 
+  /// Avatares com ilustração disponível; os demais valores do backend
+  /// continuam válidos, mas são exibidos com a imagem do primeiro.
+  static const List<Avatar> selecionaveis = [
+    avatar01,
+    avatar02,
+    avatar03,
+    avatar04,
+    avatar05,
+    avatar06,
+  ];
+
+  String get caminhoImagem {
+    final avatar = selecionaveis.contains(this) ? this : avatar01;
+    return 'assets/avatares/avatar_${avatar.valor.substring(7)}.jpg';
+  }
+
   static Avatar fromValor(String valor) {
     return Avatar.values.firstWhere(
       (a) => a.valor == valor,

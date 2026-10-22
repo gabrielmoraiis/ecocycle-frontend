@@ -19,6 +19,19 @@ class PontoColeta {
     this.distanciaKm,
   });
 
+  PontoColeta comDistancia(double distanciaKm) {
+    return PontoColeta(
+      id: id,
+      nome: nome,
+      endereco: endereco,
+      latitude: latitude,
+      longitude: longitude,
+      tiposResiduoAceitos: tiposResiduoAceitos,
+      horarioFuncionamento: horarioFuncionamento,
+      distanciaKm: distanciaKm,
+    );
+  }
+
   factory PontoColeta.fromJson(Map<String, dynamic> json) {
     return PontoColeta(
       id: json['id'] as int,

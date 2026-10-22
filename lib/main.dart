@@ -23,7 +23,8 @@ import 'features/introducao/tela_inicial.dart';
 
 void main() async {
   // Erros não tratados e os reportados com Sentry.captureException vão para
-  // o painel do Sentry, inclusive no APK release.
+  // o painel do Sentry só quando o build recebe SENTRY_DSN; sem ele, o SDK
+  // fica desligado (veja SentryConfig).
   await SentryFlutter.init((options) {
     options.dsn = SentryConfig.dsn;
     options.environment = kReleaseMode ? 'release' : 'debug';

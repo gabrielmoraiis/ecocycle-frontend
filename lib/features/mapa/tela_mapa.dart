@@ -1,4 +1,8 @@
+import 'dart:math' show max, min;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
@@ -36,9 +40,14 @@ class _TelaMapaState extends State<TelaMapa> {
   String _cepPesquisado = '06600-000';
   int _indicePontoSelecionado = 0;
   bool _buscandoLocalizacao = false;
+  bool _buscandoCep = false;
   bool _painelExpandido = false;
+  LatLng? _centroBusca;
 
   bool _carregando = true;
+  // Só a primeira carga ocupa a tela inteira; recargas (CEP/localização)
+  // mantêm o GoogleMap montado para o controlador continuar válido.
+  bool _primeiraCarga = true;
   ApiException? _erro;
   List<PontoColeta> _pontos = [];
 
@@ -56,23 +65,28 @@ class _TelaMapaState extends State<TelaMapa> {
     super.dispose();
   }
 
-  Future<void> _carregarPontos({double? lat, double? lng}) async {
+  // Carrega todos os pontos uma única vez (são poucos); buscas por CEP ou
+  // localização só reordenam por distância, sem filtrar por raio.
+  Future<void> _carregarPontos() async {
     setState(() {
       _carregando = true;
       _erro = null;
     });
     try {
-      final pontos = await _pontoColetaService.listar(
-        lat: lat,
-        lng: lng,
-        raioKm: 5,
-      );
+      final pontos = await _pontoColetaService.listar();
+      if (!mounted) return;
       setState(() {
         _pontos = pontos;
         _indicePontoSelecionado = 0;
+        _primeiraCarga = false;
       });
     } on ApiException catch (e) {
-      setState(() => _erro = e);
+      if (!mounted) return;
+      if (_primeiraCarga) {
+        setState(() => _erro = e);
+      } else {
+        _mostrarAviso(e.message);
+      }
     } finally {
       if (mounted) setState(() => _carregando = false);
     }
@@ -173,6 +187,8 @@ class _TelaMapaState extends State<TelaMapa> {
                           child: TextField(
                             controller: _cepController,
                             keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: (_) => _buscarPorCep(),
                             style: const TextStyle(
                               fontSize: 15,
                               color: AppColors.textoEscuro,
@@ -193,7 +209,7 @@ class _TelaMapaState extends State<TelaMapa> {
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton(
-                        onPressed: _buscarPorCep,
+                        onPressed: _buscandoCep ? null : _buscarPorCep,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.verdeGradienteInicio,
                           foregroundColor: AppColors.fundoBranco,
@@ -206,13 +222,22 @@ class _TelaMapaState extends State<TelaMapa> {
                           ),
                           elevation: 0,
                         ),
-                        child: const Text(
-                          'Buscar',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: _buscandoCep
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.fundoBranco,
+                                ),
+                              )
+                            : const Text(
+                                'Buscar',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ],
                   ),
@@ -234,7 +259,7 @@ class _TelaMapaState extends State<TelaMapa> {
             // overlay: expandir/recolher não redimensiona o GoogleMap, que é
             // caro para relayoutar a cada frame da animação) ---
             Expanded(
-              child: _carregando
+              child: _carregando && _primeiraCarga
                   ? const LoadingIndicator()
                   : _erro != null
                   ? ErrorState(
@@ -271,8 +296,41 @@ class _TelaMapaState extends State<TelaMapa> {
                                 onTap: () =>
                                     setState(() => _indicePontoSelecionado = i),
                               ),
+                            if (_centroBusca != null)
+                              Marker(
+                                markerId: const MarkerId('centroBusca'),
+                                position: _centroBusca!,
+                                infoWindow: InfoWindow(
+                                  title: 'CEP $_cepPesquisado',
+                                ),
+                                icon: BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueRose,
+                                ),
+                              ),
                           },
                         ),
+                        if (_carregando)
+                          const Positioned(
+                            top: 12,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: Card(
+                                shape: CircleBorder(),
+                                child: Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.verdeGradienteInicio,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         Positioned(
                           right: 16,
                           bottom: 96,
@@ -482,11 +540,104 @@ class _TelaMapaState extends State<TelaMapa> {
 
   // --- MÉTODOS AUXILIARES PARA NÃO REPETIR CÓDIGO ---
 
-  void _buscarPorCep() {
+  Future<void> _buscarPorCep() async {
+    if (_buscandoCep) return;
+    FocusScope.of(context).unfocus();
+
+    final String cep = _cepController.text.replaceAll(RegExp(r'\D'), '');
+    if (cep.length != 8) {
+      _mostrarAviso('Digite um CEP válido com 8 dígitos.');
+      return;
+    }
+    if (kIsWeb) {
+      _mostrarAviso('A busca por CEP está disponível apenas no app.');
+      return;
+    }
+
+    final String cepFormatado = '${cep.substring(0, 5)}-${cep.substring(5)}';
+    setState(() => _buscandoCep = true);
+    try {
+      final LatLng? centro = await _geocodificarCep(cepFormatado);
+      if (!mounted) return;
+      if (centro == null) {
+        _mostrarAviso('Não encontramos esse CEP. Confira e tente novamente.');
+        return;
+      }
+
+      setState(() {
+        _cepController.text = cepFormatado;
+        _cepPesquisado = cepFormatado;
+        _centroBusca = centro;
+      });
+      _ordenarPorDistancia(centro);
+      await _enquadrarBusca(centro);
+    } finally {
+      if (mounted) setState(() => _buscandoCep = false);
+    }
+  }
+
+  // Geocoder nativo do Android/iOS: não precisa de chave de API.
+  Future<LatLng?> _geocodificarCep(String cepFormatado) async {
+    try {
+      final List<Location> locais = await Geocoding().locationFromAddress(
+        '$cepFormatado, Brasil',
+      );
+      if (locais.isEmpty) return null;
+      return LatLng(locais.first.latitude, locais.first.longitude);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Calcula a distância de cada ponto até [origem] e ordena a lista do mais
+  /// próximo ao mais distante; o mais próximo já fica selecionado.
+  void _ordenarPorDistancia(LatLng origem) {
+    final ordenados = [
+      for (final ponto in _pontos)
+        ponto.comDistancia(
+          Geolocator.distanceBetween(
+                origem.latitude,
+                origem.longitude,
+                ponto.latitude,
+                ponto.longitude,
+              ) /
+              1000,
+        ),
+    ]..sort((a, b) => a.distanciaKm!.compareTo(b.distanciaKm!));
+
     setState(() {
-      _cepPesquisado = _cepController.text.trim();
+      _pontos = ordenados;
       _indicePontoSelecionado = 0;
+      _painelExpandido = true;
     });
+  }
+
+  /// Ajusta a câmera para mostrar a origem da busca junto com o ponto de
+  /// coleta mais próximo; sem pontos, apenas aproxima na origem.
+  Future<void> _enquadrarBusca(LatLng centro) async {
+    final GoogleMapController? controlador = _controladorMapa;
+    if (controlador == null) return;
+
+    final List<PontoColeta> pontos = _pontosFiltrados;
+    if (pontos.isEmpty) {
+      await controlador.animateCamera(CameraUpdate.newLatLngZoom(centro, 14));
+      return;
+    }
+
+    final PontoColeta maisProximo = pontos.first;
+    final double minLat = min(centro.latitude, maisProximo.latitude);
+    final double maxLat = max(centro.latitude, maisProximo.latitude);
+    final double minLng = min(centro.longitude, maisProximo.longitude);
+    final double maxLng = max(centro.longitude, maisProximo.longitude);
+    await controlador.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        72,
+      ),
+    );
   }
 
   Future<void> _irParaLocalizacaoAtual() async {
@@ -513,13 +664,14 @@ class _TelaMapaState extends State<TelaMapa> {
       }
 
       final Position posicao = await Geolocator.getCurrentPosition();
-      await _controladorMapa?.animateCamera(
-        CameraUpdate.newLatLngZoom(
-          LatLng(posicao.latitude, posicao.longitude),
-          15,
-        ),
-      );
-      await _carregarPontos(lat: posicao.latitude, lng: posicao.longitude);
+      if (!mounted) return;
+      final LatLng origem = LatLng(posicao.latitude, posicao.longitude);
+      setState(() {
+        _cepPesquisado = 'você';
+        _centroBusca = null;
+      });
+      _ordenarPorDistancia(origem);
+      await _enquadrarBusca(origem);
     } finally {
       if (mounted) setState(() => _buscandoLocalizacao = false);
     }

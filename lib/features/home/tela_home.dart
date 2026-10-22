@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/providers/progresso_provider.dart';
+import '../../core/providers/session_controller.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/avatar_usuario.dart';
 import '../../core/widgets/eco_bottom_nav_bar.dart';
 import '../album/tela_album.dart';
 import '../aprender/tela_aprender.dart';
@@ -67,19 +69,7 @@ class _TelaHomeState extends State<TelaHome> {
                     ),
                     Row(
                       children: [
-                        Container(
-                          decoration: const BoxDecoration(
-                            color: AppColors.bordaVerdeClara,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.person_outline,
-                              color: AppColors.verdeGradienteInicio,
-                            ),
-                            onPressed: () => _abrirPerfil(context),
-                          ),
-                        ),
+                        _construirBotaoPerfil(context),
                         const SizedBox(width: 8),
                         Container(
                           decoration: const BoxDecoration(
@@ -373,6 +363,36 @@ class _TelaHomeState extends State<TelaHome> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const TelaAlbum()),
+    );
+  }
+
+  Widget _construirBotaoPerfil(BuildContext context) {
+    final usuario = context.watch<SessionController>().usuario;
+    if (usuario == null) {
+      return Container(
+        decoration: const BoxDecoration(
+          color: AppColors.bordaVerdeClara,
+          shape: BoxShape.circle,
+        ),
+        child: IconButton(
+          icon: const Icon(
+            Icons.person_outline,
+            color: AppColors.verdeGradienteInicio,
+          ),
+          onPressed: () => _abrirPerfil(context),
+        ),
+      );
+    }
+    return GestureDetector(
+      onTap: () => _abrirPerfil(context),
+      child: Container(
+        padding: const EdgeInsets.all(2),
+        decoration: const BoxDecoration(
+          color: AppColors.bordaVerdeClara,
+          shape: BoxShape.circle,
+        ),
+        child: AvatarUsuario(avatar: usuario.avatar, tamanho: 44),
+      ),
     );
   }
 

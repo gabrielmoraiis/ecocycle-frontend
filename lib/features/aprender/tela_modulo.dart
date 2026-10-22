@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/data/ilustracao_conteudo_catalog.dart';
 import '../../core/models/conteudo_educativo.dart';
 import '../../core/services/trilha_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/async_builder.dart';
 import '../../core/widgets/eco_bottom_nav_bar.dart';
+import '../../core/widgets/imagem_conteudo.dart';
 import 'cabecalho_modulo.dart';
 import 'tela_quiz.dart';
 
@@ -193,37 +195,54 @@ class _TelaModuloState extends State<TelaModulo> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.bordaVerdeClara),
       ),
-      child: MarkdownBody(
-        data: conteudo.corpo,
-        styleSheet: MarkdownStyleSheet(
-          p: const TextStyle(
-            fontSize: 14,
-            color: AppColors.textoCinzaClaro,
-            height: 1.4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ImagemConteudo(
+            imagemSugerida: ilustracaoDoConteudo(conteudo),
+            margem: const EdgeInsets.only(bottom: 20),
           ),
-          h1: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textoEscuro,
-          ),
-          h2: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textoEscuro,
-          ),
-          h3: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textoEscuro,
-          ),
-          strong: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.verdeEscuroTexto,
-          ),
-          listBullet: const TextStyle(
-            fontSize: 14,
-            color: AppColors.textoCinzaClaro,
-          ),
+          _construirMarkdown(conteudo),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirMarkdown(ConteudoEducativo conteudo) {
+    return MarkdownBody(
+      data: conteudo.corpo,
+      imageBuilder: (uri, _, _) => ImagemConteudo(
+        imagemSugerida: uri.toString(),
+        margem: const EdgeInsets.symmetric(vertical: 8),
+      ),
+      styleSheet: MarkdownStyleSheet(
+        p: const TextStyle(
+          fontSize: 14,
+          color: AppColors.textoCinzaClaro,
+          height: 1.4,
+        ),
+        h1: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textoEscuro,
+        ),
+        h2: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textoEscuro,
+        ),
+        h3: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textoEscuro,
+        ),
+        strong: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: AppColors.verdeEscuroTexto,
+        ),
+        listBullet: const TextStyle(
+          fontSize: 14,
+          color: AppColors.textoCinzaClaro,
         ),
       ),
     );

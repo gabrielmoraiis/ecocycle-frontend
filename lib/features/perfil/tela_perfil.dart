@@ -5,20 +5,8 @@ import '../../core/models/usuario.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers/session_controller.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/avatar_usuario.dart';
 import '../introducao/tela_inicial.dart';
-
-const List<Color> _coresAvatar = [
-  AppColors.verdeGradienteInicio,
-  Colors.blue,
-  Colors.orange,
-  Colors.purple,
-  Colors.pink,
-  Colors.teal,
-  Colors.indigo,
-  Colors.brown,
-  Colors.deepOrange,
-  Colors.cyan,
-];
 
 class TelaPerfil extends StatefulWidget {
   const TelaPerfil({super.key});
@@ -195,44 +183,18 @@ class _TelaPerfilState extends State<TelaPerfil> {
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: Avatar.values.length,
+                        itemCount: Avatar.selecionaveis.length,
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 5,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
+                              crossAxisCount: 3,
+                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 16,
                             ),
                         itemBuilder: (context, index) {
-                          final avatar = Avatar.values[index];
-                          final selecionado = avatar == usuario.avatar;
-                          return GestureDetector(
-                            onTap: () => _selecionarAvatar(avatar),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: _coresAvatar[index],
-                                shape: BoxShape.circle,
-                                border: selecionado
-                                    ? Border.all(
-                                        color: AppColors.textoEscuro,
-                                        width: 3,
-                                      )
-                                    : null,
-                              ),
-                              child: Center(
-                                child: selecionado
-                                    ? const Icon(
-                                        Icons.check,
-                                        color: Colors.white,
-                                      )
-                                    : Text(
-                                        '${index + 1}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                              ),
-                            ),
+                          final avatar = Avatar.selecionaveis[index];
+                          return _construirOpcaoAvatar(
+                            avatar,
+                            selecionado: avatar == usuario.avatar,
                           );
                         },
                       ),
@@ -279,15 +241,58 @@ class _TelaPerfilState extends State<TelaPerfil> {
   }
 
   Widget _construirAvatarAtual(Avatar avatar) {
-    final index = Avatar.values.indexOf(avatar);
     return Container(
-      width: 88,
-      height: 88,
-      decoration: BoxDecoration(
-        color: _coresAvatar[index],
+      padding: const EdgeInsets.all(4),
+      decoration: const BoxDecoration(
+        color: AppColors.bordaVerdeClara,
         shape: BoxShape.circle,
       ),
-      child: const Icon(Icons.person, color: Colors.white, size: 44),
+      child: AvatarUsuario(avatar: avatar, tamanho: 96),
+    );
+  }
+
+  Widget _construirOpcaoAvatar(Avatar avatar, {required bool selecionado}) {
+    return GestureDetector(
+      onTap: () => _selecionarAvatar(avatar),
+      child: LayoutBuilder(
+        builder: (context, constraints) => Stack(
+          clipBehavior: Clip.none,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selecionado
+                    ? AppColors.verdeGradienteInicio
+                    : AppColors.bordaVerdeClara,
+              ),
+              child: AvatarUsuario(
+                avatar: avatar,
+                tamanho: constraints.maxWidth - 6,
+              ),
+            ),
+            if (selecionado)
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: AppColors.verdeGradienteInicio,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.fundoBranco, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    color: AppColors.fundoBranco,
+                    size: 16,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
