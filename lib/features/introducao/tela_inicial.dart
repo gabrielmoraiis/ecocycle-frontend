@@ -88,20 +88,20 @@ class TelaInicialEcoCycle extends StatelessWidget {
                       child: Container(
                         width: 120,
                         height: 120,
+                        padding: const EdgeInsets.all(18),
+                        // Fundo sólido: os verdes da logo sumiriam sobre o
+                        // degradê verde da tela com o branco translúcido.
                         decoration: BoxDecoration(
-                          color: AppColors.branco20,
+                          color: AppColors.fundoBranco,
                           border: Border.all(
                             color: AppColors.branco50,
                             width: 2,
                           ),
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.refresh_rounded,
-                            size: 60,
-                            color: AppColors.textoBranco,
-                          ),
+                        child: Image.asset(
+                          'assets/logo/simbolo.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),

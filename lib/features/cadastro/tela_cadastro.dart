@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/api_exception.dart';
@@ -323,61 +322,6 @@ class _TelaCadastroState extends State<TelaCadastro> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                ),
-                const SizedBox(height: 24),
-
-                // --- DIVISOR "OU" ---
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Divider(color: AppColors.bordaVerdeClara),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Text(
-                        'ou',
-                        style: TextStyle(
-                          color: AppColors.textoCinzaClaro,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const Expanded(
-                      child: Divider(color: AppColors.bordaVerdeClara),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // --- BOTÃO GOOGLE ---
-                OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 56),
-                    side: const BorderSide(color: AppColors.bordaVerdeClara),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/svg/material-icon-theme_google.svg',
-                        width: 24,
-                        height: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Continuar com Google',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: AppColors.textoEscuro,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
                 const SizedBox(height: 32),
 

@@ -1,0 +1,136 @@
+[
+  {
+    "nome": "Ecoponto Jardim Belval",
+    "endereco": "Av. das Nações, 705 - Jardim Belval, Barueri - SP",
+    "latitude": -23.5098639,
+    "longitude": -46.8943958,
+    "tiposResiduoAceitos": [
+      "Celulares",
+      "Baterias",
+      "Pilhas",
+      "Eletroeletrônicos",
+      "Pneus",
+      "Madeira",
+      "Móveis",
+      "Metais",
+      "Ferrosos",
+      "Entulho",
+      "Recicláveis"
+    ],
+    "horarioFuncionamento": "Seg. a sex.: 09h às 18h. Sáb.: 09h às 13h",
+    "_pendente": "Coordenada APROXIMADA (centro do bairro): o endereço não existe no OpenStreetMap. Confirmar no Google Maps. Não aceita lixo domiciliar, químico nem hospitalar."
+  },
+  {
+    "nome": "Ecoponto Pindorama",
+    "endereco": "R. Afonso Crudo, 235 - Pindorama, Barueri - SP",
+    "latitude": -23.4872382,
+    "longitude": -46.8796754,
+    "tiposResiduoAceitos": [
+      "Celulares",
+      "Baterias",
+      "Pilhas",
+      "Eletroeletrônicos",
+      "Pneus",
+      "Madeira",
+      "Móveis",
+      "Metais",
+      "Ferrosos",
+      "Entulho",
+      "Recicláveis"
+    ],
+    "horarioFuncionamento": "Seg. a sex.: 09h às 18h. Sáb.: 09h às 13h",
+    "_pendente": "Coordenada no nível da rua (sem o número). Não aceita lixo domiciliar, químico nem hospitalar."
+  },
+  {
+    "nome": "Ecoponto Bairro dos Altos",
+    "endereco": "Est. Dr. Cícero Borges de Morais, 2235 - Bairro dos Altos, Barueri - SP",
+    "latitude": -23.4907032,
+    "longitude": -46.9181045,
+    "tiposResiduoAceitos": [
+      "Celulares",
+      "Baterias",
+      "Pilhas",
+      "Eletroeletrônicos",
+      "Pneus",
+      "Madeira",
+      "Móveis",
+      "Metais",
+      "Ferrosos",
+      "Entulho",
+      "Recicláveis"
+    ],
+    "horarioFuncionamento": "Seg. a sex.: 09h às 18h. Sáb.: 09h às 13h",
+    "_pendente": "Coordenada no nível da rua (sem o número). Não aceita lixo domiciliar, químico nem hospitalar."
+  },
+  {
+    "nome": "Ecoponto Parque Imperial",
+    "endereco": "R. Duarte da Costa, s/n - Parque Imperial, Barueri - SP",
+    "latitude": -23.487888,
+    "longitude": -46.8060702,
+    "tiposResiduoAceitos": [
+      "Celulares",
+      "Baterias",
+      "Pilhas",
+      "Eletroeletrônicos",
+      "Pneus",
+      "Madeira",
+      "Móveis",
+      "Metais",
+      "Ferrosos",
+      "Entulho",
+      "Recicláveis"
+    ],
+    "horarioFuncionamento": "Seg. a sex.: 09h às 18h. Sáb.: 09h às 13h",
+    "_pendente": "Endereço sem número: coordenada no nível da rua. Não aceita lixo domiciliar, químico nem hospitalar."
+  },
+  {
+    "nome": "Ecoponto Parque Taddeo Cananéia",
+    "endereco": "R. Chico Mendes, 237 - Parque Imperial, Barueri - SP",
+    "latitude": -23.4926874,
+    "longitude": -46.8069941,
+    "tiposResiduoAceitos": [
+      "Celulares",
+      "Baterias",
+      "Pilhas",
+      "Eletroeletrônicos",
+      "Pneus",
+      "Madeira",
+      "Móveis",
+      "Metais",
+      "Ferrosos",
+      "Entulho",
+      "Recicláveis"
+    ],
+    "horarioFuncionamento": "Seg. a sex.: 09h às 18h. Sáb.: 09h às 13h",
+    "_pendente": "Coordenada no nível da rua (sem o número). Não aceita lixo domiciliar, químico nem hospitalar."
+  },
+  {
+    "nome": "Leroy Merlin - Tamboré",
+    "endereco": "Av. Fernando Cerqueira César Coimbra, 1000 - Tamboré, Barueri - SP, 06465-090",
+    "latitude": -23.5082644,
+    "longitude": -46.8354992,
+    "tiposResiduoAceitos": [
+      "Celulares",
+      "Baterias",
+      "Pilhas",
+      "Eletroeletrônicos"
+    ],
+    "horarioFuncionamento": "Seg. a sáb.: 08h às 22h. Dom.: 09h às 20h",
+    "_pendente": "Coordenada exata da loja. Fica em Barueri (não em São Paulo, como no texto original)."
+  },
+  {
+    "nome": "Ecoponto Vila Jaguará",
+    "endereco": "R. Agrestina, 189 - Jaguará, São Paulo - SP, 05117-100",
+    "latitude": -23.5158301,
+    "longitude": -46.7413933,
+    "tiposResiduoAceitos": [
+      "Entulho",
+      "Madeira",
+      "Móveis",
+      "Poda",
+      "Recicláveis"
+    ],
+    "horarioFuncionamento": "Seg. a sáb.: 06h às 22h. Dom. e feriados: 06h às 18h. Limite de 1 m³ por pessoa/dia",
+    "_pendente": "Coordenada no nível da rua (sem o número). ATENÇÃO: não recebe eletrônicos, pilhas nem baterias."
+  }
+]

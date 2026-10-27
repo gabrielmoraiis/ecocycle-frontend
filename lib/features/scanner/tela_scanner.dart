@@ -5,10 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-import '../../core/data/figurinha_presentation_catalog.dart';
 import '../../core/ia/classificador_componente.dart';
-import '../../core/models/figurinha.dart';
-import '../../core/models/identificador_componente.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers/figurinhas_provider.dart';
 import '../../core/providers/progresso_provider.dart';
@@ -16,13 +13,14 @@ import '../../core/services/scanner_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/eco_bottom_nav_bar.dart';
 import '../album/tela_info_figurinha.dart';
+import '../aprender/tela_conquista.dart';
 
 const String _mensagemNaoIdentificado =
     'Tente aproximar mais a câmera ou melhore a iluminação do ambiente.';
 const String _mensagemSemCamera =
-    'Não foi possível usar a câmera. Verifique a permissão do app ou busque o componente pelo nome.';
+    'Não foi possível usar a câmera. Verifique a permissão do app.';
 const String _mensagemSemSuporte =
-    'O Scanner IA funciona apenas no app para celular. Busque o componente pelo nome.';
+    'O Scanner IA funciona apenas no app para celular.';
 
 class TelaScanner extends StatefulWidget {
   const TelaScanner({super.key});
@@ -58,7 +56,7 @@ class _TelaScannerState extends State<TelaScanner>
     _scannerService = ScannerService(context.read());
 
     if (!ClassificadorComponente.suportado) {
-      // Na web não há modelo: vai direto para a busca manual.
+      // Na web não há modelo: mostra direto o aviso de indisponível.
       _erroCamera = 'Scanner IA indisponível no navegador.';
       _falhaIdentificacao = true;
       _mensagemFalha = _mensagemSemSuporte;
@@ -115,7 +113,7 @@ class _TelaScannerState extends State<TelaScanner>
     });
   }
 
-  // Sem câmera, o painel de falha (busca manual) continua sendo a saída.
+  // Sem câmera, o painel de falha continua visível.
   void _encerrarProcessamento() {
     setState(() {
       _processando = false;
@@ -442,27 +440,7 @@ class _TelaScannerState extends State<TelaScanner>
                 ),
               ),
             ),
-            const SizedBox(height: 12),
           ],
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: _abrirBuscaManual,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.verdeGradienteInicio,
-                backgroundColor: AppColors.fundoBranco,
-                side: const BorderSide(color: AppColors.bordaVerdeClara),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text(
-                'Buscar manualmente por nome',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
           ..._botaoGaleriaDebug(),
         ],
       ),
@@ -510,9 +488,8 @@ class _TelaScannerState extends State<TelaScanner>
 
   // Só em debug: analisa uma foto da galeria, para testar o modelo no
   // emulador sem câmera.
-  Future<void> _escolherDaGaleria() => _analisar(
-    () => ImagePicker().pickImage(source: ImageSource.gallery),
-  );
+  Future<void> _escolherDaGaleria() =>
+      _analisar(() => ImagePicker().pickImage(source: ImageSource.gallery));
 
   /// [obterFoto] devolve null quando o usuário desiste (ex.: fecha a galeria).
   Future<void> _analisar(Future<XFile?> Function() obterFoto) async {
@@ -573,11 +550,14 @@ class _TelaScannerState extends State<TelaScanner>
       }
 
       _encerrarProcessamento();
+      // Primeira vez: comemora com a tela de conquista. Já desbloqueada: não
+      // há nada novo, então vai direto para o detalhe.
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) =>
-              TelaInfoFigurinha(figurinha: resultado.figurinha!),
+          builder: (context) => resultado.novaDesbloqueada
+              ? TelaConquista.scanner(resultado: resultado)
+              : TelaInfoFigurinha(figurinha: resultado.figurinha!),
         ),
       );
     } on ApiException catch (e, pilha) {
@@ -585,119 +565,6 @@ class _TelaScannerState extends State<TelaScanner>
       Sentry.captureException(e, stackTrace: pilha);
       if (!mounted) return;
       _encerrarProcessamento();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
-    }
-  }
-
-  void _abrirBuscaManual() {
-    final bloqueadas = context
-        .read<FigurinhasProvider>()
-        .bloqueadas
-        .where((f) => f.tipo == TipoFigurinha.scan)
-        .toList();
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.fundoBranco,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Buscar componente por nome',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textoEscuro,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (bloqueadas.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      'Nenhum componente disponível para busca manual no momento.',
-                      style: TextStyle(color: AppColors.textoCinzaClaro),
-                    ),
-                  )
-                else
-                  for (final figurinha in bloqueadas)
-                    Builder(
-                      builder: (context) {
-                        final apresentacao = apresentacaoDaFigurinha(
-                          figurinha.codigo,
-                        );
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: apresentacao.corFundo,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              apresentacao.icone,
-                              color: apresentacao.corIcone,
-                              size: 20,
-                            ),
-                          ),
-                          title: Text(
-                            figurinha.nome ??
-                                IdentificadorComponente.daFigurinha(
-                                  figurinha.codigo,
-                                )?.rotulo ??
-                                'Componente ${figurinha.codigo}',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          onTap: () => _selecionarManualmente(figurinha),
-                        );
-                      },
-                    ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _selecionarManualmente(Figurinha figurinha) async {
-    final identificador = IdentificadorComponente.daFigurinha(
-      figurinha.codigo,
-    );
-    Navigator.pop(context); // fecha o bottom sheet
-    if (identificador == null) return;
-
-    try {
-      final resultado = await _scannerService.reconhecer(identificador, 100);
-      if (!mounted) return;
-      // Sem câmera (ou na web) o painel de falha continua sendo a saída.
-      if (_erroCamera == null) setState(() => _falhaIdentificacao = false);
-      if (resultado.novaDesbloqueada) {
-        context.read<FigurinhasProvider>().recarregar();
-        context.read<ProgressoProvider>().recarregar();
-      }
-      if (resultado.figurinha != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                TelaInfoFigurinha(figurinha: resultado.figurinha!),
-          ),
-        );
-      }
-    } on ApiException catch (e) {
-      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
