@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -12,6 +13,7 @@ import '../../core/providers/progresso_provider.dart';
 import '../../core/services/scanner_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/eco_bottom_nav_bar.dart';
+import '../../core/widgets/layout_eco.dart';
 import '../album/tela_info_figurinha.dart';
 import '../aprender/tela_conquista.dart';
 
@@ -21,6 +23,10 @@ const String _mensagemSemCamera =
     'Não foi possível usar a câmera. Verifique a permissão do app.';
 const String _mensagemSemSuporte =
     'O Scanner IA funciona apenas no app para celular.';
+
+// Fundo escuro do Scanner: a câmera ocupa a tela e o resto não compete.
+const Color _fundoScanner = Color(0xFF121A12);
+const Color _verdeMoldura = Color(0xFFA5D6A7);
 
 class TelaScanner extends StatefulWidget {
   const TelaScanner({super.key});
@@ -38,6 +44,7 @@ class _TelaScannerState extends State<TelaScanner>
   bool _falhaIdentificacao = false;
   String _mensagemFalha = _mensagemNaoIdentificado;
   bool _cameraPausada = false;
+  bool _lanternaLigada = false;
 
   // Carregado uma vez por tela; se falhar, o erro aparece na primeira captura.
   Future<ClassificadorComponente>? _classificador;
@@ -85,8 +92,14 @@ class _TelaScannerState extends State<TelaScanner>
         enableAudio: false,
       );
       _controladorCamera = controlador;
-      setState(() => _inicializacaoCamera = controlador.initialize());
-      await _inicializacaoCamera;
+      // O setState não pode devolver o Future (em debug isso é um erro).
+      final Future<void> inicializacao = controlador.initialize();
+      setState(() {
+        _inicializacaoCamera = inicializacao;
+      });
+      await inicializacao;
+      // Redesenha o topo para mostrar o botão da lanterna.
+      if (mounted) setState(() {});
     } catch (e, pilha) {
       _registrar('falha ao abrir a câmera: $e');
       Sentry.captureException(e, stackTrace: pilha);
@@ -140,6 +153,7 @@ class _TelaScannerState extends State<TelaScanner>
       setState(() {
         _controladorCamera = null;
         _cameraPausada = true;
+        _lanternaLigada = false;
       });
       controlador.dispose();
     } else if (state == AppLifecycleState.resumed && _cameraPausada) {
@@ -159,48 +173,44 @@ class _TelaScannerState extends State<TelaScanner>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: _fundoScanner,
+        body: Column(
           children: [
-            // --- TOPO: VOLTAR + TÍTULO ---
-            Container(
-              color: AppColors.fundoBranco,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            // --- CÂMERA EM TELA CHEIA, COM O TOPO POR CIMA ---
+            Expanded(
               child: Stack(
-                alignment: Alignment.center,
+                fit: StackFit.expand,
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
+                  _construirAreaCamera(),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    // Escurece o topo para o título e os botões ficarem
+                    // legíveis sobre qualquer imagem da câmera.
+                    child: DecoratedBox(
                       decoration: const BoxDecoration(
-                        color: AppColors.verdeClaroFundo,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.chevron_left,
-                          color: AppColors.verdeGradienteInicio,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Color(0x99000000), Color(0x00000000)],
                         ),
-                        onPressed: () => Navigator.pop(context),
                       ),
-                    ),
-                  ),
-                  const Text(
-                    'Scanner IA',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.verdeGradienteInicio,
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: _construirTopo(),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-
-            // --- ÁREA DA CÂMERA ---
-            Expanded(child: _construirAreaCamera()),
 
             // --- STATUS + BOTÃO DE CAPTURA / PAINEL DE ERRO ---
             _falhaIdentificacao
@@ -208,20 +218,79 @@ class _TelaScannerState extends State<TelaScanner>
                 : _construirPainelEscaneando(),
           ],
         ),
-      ),
 
-      // --- BARRA DE NAVEGAÇÃO INFERIOR ---
-      bottomNavigationBar: const EcoBottomNavBar(tabAtual: EcoTab.scanner),
+        // --- BARRA DE NAVEGAÇÃO INFERIOR ---
+        bottomNavigationBar: const EcoBottomNavBar(tabAtual: EcoTab.scanner),
+      ),
     );
   }
 
   // --- MÉTODOS AUXILIARES PARA NÃO REPETIR CÓDIGO ---
 
+  bool get _cameraPronta {
+    final CameraController? controlador = _controladorCamera;
+    return controlador != null && controlador.value.isInitialized;
+  }
+
+  Future<void> _alternarLanterna() async {
+    final CameraController? controlador = _controladorCamera;
+    if (controlador == null || !controlador.value.isInitialized) return;
+    final bool ligar = !_lanternaLigada;
+    try {
+      await controlador.setFlashMode(ligar ? FlashMode.torch : FlashMode.off);
+      if (mounted) setState(() => _lanternaLigada = ligar);
+    } on CameraException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Este aparelho não tem lanterna.')),
+      );
+    }
+  }
+
+  Widget _construirTopo() {
+    const Color fundoBotao = Color(0x73000000);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
+        children: [
+          BotaoCircularEco(
+            icone: Icons.chevron_left,
+            tooltip: 'Voltar',
+            corFundo: fundoBotao,
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Scanner IA',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.fundoBranco,
+              ),
+            ),
+          ),
+          if (_cameraPronta)
+            BotaoCircularEco(
+              icone: _lanternaLigada
+                  ? Icons.flashlight_off_outlined
+                  : Icons.flashlight_on_outlined,
+              tooltip: _lanternaLigada ? 'Desligar lanterna' : 'Ligar lanterna',
+              corFundo: _lanternaLigada ? const Color(0xE6FFFFFF) : fundoBotao,
+              corIcone: _lanternaLigada
+                  ? AppColors.verdeEscuro
+                  : AppColors.fundoBranco,
+              onPressed: _alternarLanterna,
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _construirAreaCamera() {
     if (_erroCamera != null) {
       return Container(
-        width: double.infinity,
-        color: Colors.black,
+        color: const Color(0xFF263228),
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Center(
           child: Column(
@@ -268,9 +337,10 @@ class _TelaScannerState extends State<TelaScanner>
                 ),
               );
             }
-            return const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.destaqueVerdeClaro,
+            return const ColoredBox(
+              color: Color(0xFF263228),
+              child: Center(
+                child: CircularProgressIndicator(color: _verdeMoldura),
               ),
             );
           },
@@ -278,10 +348,11 @@ class _TelaScannerState extends State<TelaScanner>
         if (_falhaIdentificacao)
           Center(
             child: Container(
-              width: 70,
-              height: 70,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                color: const Color(0x73000000),
                 border: Border.all(color: Colors.white, width: 2.5),
               ),
               child: const Icon(
@@ -294,22 +365,51 @@ class _TelaScannerState extends State<TelaScanner>
         else ...[
           Center(
             child: SizedBox(
-              width: 220,
-              height: 220,
-              child: CustomPaint(painter: _MolduraScanner()),
+              width: 250,
+              height: 250,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(painter: _MolduraScanner()),
+                  ),
+                  // Linha de varredura pulsando no meio da moldura.
+                  Center(
+                    child: FadeTransition(
+                      opacity: _pulsoController,
+                      child: Container(
+                        height: 2,
+                        margin: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: _verdeMoldura,
+                          borderRadius: BorderRadius.circular(1),
+                          boxShadow: const [
+                            BoxShadow(color: _verdeMoldura, blurRadius: 12),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const Positioned(
-            left: 24,
-            right: 24,
-            bottom: 40,
-            child: Text(
-              'Centralize o aparelho no quadrado',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
+          Align(
+            alignment: const Alignment(0, 0.9),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0x80000000),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                _processando
+                    ? 'Analisando...'
+                    : 'Centralize o aparelho no quadrado',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
           ),
@@ -318,61 +418,88 @@ class _TelaScannerState extends State<TelaScanner>
     );
   }
 
+  String _rotuloReconhecidos() {
+    final int quantidade =
+        ClassificadorComponente.componentesReconhecidos.length;
+    return quantidade == 1
+        ? 'A IA RECONHECE 1 APARELHO'
+        : 'A IA RECONHECE $quantidade APARELHOS';
+  }
+
   Widget _construirPainelEscaneando() {
     return Container(
       width: double.infinity,
-      color: AppColors.verdeClaroFundo,
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      color: _fundoScanner,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Text(
+            _rotuloReconhecidos(),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
             children: [
-              FadeTransition(
-                opacity: _pulsoController,
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: const BoxDecoration(
-                    color: AppColors.destaqueVerdeClaro,
-                    shape: BoxShape.circle,
+              // Só o que o modelo instalado reconhece de fato.
+              for (final componente
+                  in ClassificadorComponente.componentesReconhecidos)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0x1AFFFFFF),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    componente.rotulo,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _processando ? 'Analisando...' : 'Escaneando...',
-                style: const TextStyle(
-                  color: AppColors.verdeGradienteInicio,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 16),
-          GestureDetector(
-            onTap: _processando ? null : _capturarEAnalisar,
-            child: Container(
-              width: 76,
-              height: 76,
-              decoration: const BoxDecoration(
-                color: AppColors.verdeGradienteInicio,
-                shape: BoxShape.circle,
-              ),
-              child: _processando
-                  ? const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: CircularProgressIndicator(
+          Semantics(
+            button: true,
+            label: 'Tirar foto e identificar',
+            child: GestureDetector(
+              onTap: _processando ? null : _capturarEAnalisar,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.verdeGradienteInicio,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 4),
+                ),
+                child: _processando
+                    ? const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: CircularProgressIndicator(
+                          color: AppColors.fundoBranco,
+                          strokeWidth: 3,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.photo_camera_outlined,
                         color: AppColors.fundoBranco,
-                        strokeWidth: 3,
+                        size: 32,
                       ),
-                    )
-                  : const Icon(
-                      Icons.camera_alt,
-                      color: AppColors.fundoBranco,
-                      size: 30,
-                    ),
+              ),
             ),
           ),
           ..._botaoGaleriaDebug(),
@@ -384,61 +511,62 @@ class _TelaScannerState extends State<TelaScanner>
   Widget _construirPainelErro() {
     return Container(
       width: double.infinity,
-      color: AppColors.verdeClaroFundo,
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+      color: _fundoScanner,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFFCE4E7),
+              color: const Color(0xFF3A2224),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFF5B8C0)),
+              border: Border.all(color: const Color(0xFF6B3A3E)),
             ),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Não conseguimos identificar o aparelho',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red.shade700,
-                  ),
+                const Icon(
+                  Icons.error_outline,
+                  color: Color(0xFFFFB4AB),
+                  size: 22,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  _mensagemFalha,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.red.shade400,
-                    height: 1.3,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Não conseguimos identificar o aparelho',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFFDAD6),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _mensagemFalha,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.35,
+                          color: Color(0xFFFFB4AB),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
           if (ClassificadorComponente.suportado) ...[
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _processando ? null : _tentarNovamente,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.verdeGradienteInicio,
-                  foregroundColor: AppColors.fundoBranco,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'Tentar novamente',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                ),
-              ),
+            const SizedBox(height: 14),
+            ElevatedButton.icon(
+              onPressed: _processando ? null : _tentarNovamente,
+              icon: const Icon(Icons.refresh, size: 20),
+              label: const Text('Tentar novamente'),
+              style: BotoesEco.principal(altura: 52),
             ),
           ],
           ..._botaoGaleriaDebug(),
@@ -573,13 +701,13 @@ class _TelaScannerState extends State<TelaScanner>
 }
 
 class _MolduraScanner extends CustomPainter {
-  static const double _tamanhoCanto = 32;
+  static const double _tamanhoCanto = 40;
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint tinta = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 3
+      ..color = _verdeMoldura
+      ..strokeWidth = 4
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 

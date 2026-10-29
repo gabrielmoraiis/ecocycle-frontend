@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/cartao_figurinha.dart';
 import '../../core/widgets/eco_bottom_nav_bar.dart';
 import '../mapa/tela_mapa.dart';
+import 'tela_guia_descarte_seguro.dart';
 
 // Cores das seções da ficha: cada informação tem a sua, para não virar uma
 // sequência de caixas iguais.
@@ -22,6 +23,7 @@ const Color _laranjaTexto = Color(0xFF5D3A12);
 const Color _textoTitulo = Color(0xFF212121);
 const Color _textoCorpo = Color(0xFF555555);
 const Color _textoSecundario = Color(0xFF616161);
+const Color _ardosia = Color(0xFF263238);
 
 class TelaInfoFigurinha extends StatelessWidget {
   final Figurinha figurinha;
@@ -105,6 +107,10 @@ class TelaInfoFigurinha extends StatelessWidget {
                               const SizedBox(height: 20),
                             ] else
                               const SizedBox(height: 20),
+                            if (apresentacao.protecaoDados.isNotEmpty) ...[
+                              _construirProtecaoDados(context, apresentacao),
+                              const SizedBox(height: 22),
+                            ],
                             const Padding(
                               padding: EdgeInsets.only(left: 4, bottom: 12),
                               child: Text(
@@ -182,6 +188,160 @@ class TelaInfoFigurinha extends StatelessWidget {
           CartaoFigurinha(figurinha: figurinha),
           const SizedBox(height: 18),
           EtiquetasFigurinha(figurinha: figurinha),
+        ],
+      ),
+    );
+  }
+
+  /// "Antes de descartar: proteja seus dados", para aparelhos que guardam
+  /// dados pessoais. HD e notebook levam ao guia completo de limpeza.
+  Widget _construirProtecaoDados(
+    BuildContext context,
+    FigurinhaApresentacao apresentacao,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _ardosia,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40263238),
+            blurRadius: 22,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              _construirIconeFicha(
+                Icons.shield_outlined,
+                AppColors.fundoBranco,
+                const Color(0x1FFFFFFF),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ANTES DE DESCARTAR',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                        color: Color(0xFFB0BEC5),
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Proteja seus dados',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.fundoBranco,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text.rich(
+            TextSpan(
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.45,
+                color: Color(0xFFECEFF1),
+              ),
+              children: [
+                TextSpan(
+                  text:
+                      'Este aparelho guarda fotos, senhas e documentos. Apagar arquivos ou formatar ',
+                ),
+                TextSpan(
+                  text: 'não remove',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      ' os dados de verdade: eles ainda podem ser recuperados.',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (int i = 0; i < apresentacao.protecaoDados.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFA5D6A7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${i + 1}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1B5E20),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      apresentacao.protecaoDados[i],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.fundoBranco,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (apresentacao.temGuiaDescarteSeguro) ...[
+            const SizedBox(height: 6),
+            ElevatedButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      TelaGuiaDescarteSeguro(aparelho: figurinha.nome ?? 'HD'),
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.fundoBranco,
+                foregroundColor: _ardosia,
+                minimumSize: const Size.fromHeight(48),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Ver passo a passo',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(width: 6),
+                  Icon(Icons.chevron_right, size: 20),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

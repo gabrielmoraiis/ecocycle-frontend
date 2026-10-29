@@ -16,4 +16,18 @@ abstract class AppColors {
   static const Color branco50 = Color(0x80FFFFFF);
   static const Color branco70 = Color(0xB3FFFFFF);
   static const Color fundoBranco = Color(0xFFFFFFFF);
+
+  // Layout novo: cabeçalhos verdes, títulos e textos secundários com mais
+  // contraste que textoEscuro/textoCinzaClaro.
+  static const Color verdeCabecalho = Color(0xFF2E7D32);
+  static const Color verdeEscuro = Color(0xFF1B5E20);
+  static const Color verdeSobreCabecalho = Color(0xFFE8F5E9);
+  static const Color textoTitulo = Color(0xFF212121);
+  static const Color textoSecundario = Color(0xFF616161);
+  static const Color laranjaFundo = Color(0xFFFFF6E5);
+  static const Color laranjaIconeFundo = Color(0xFFFFE0B2);
+  static const Color laranjaTexto = Color(0xFF7A3A00);
+  static const Color laranjaIcone = Color(0xFF9A4A00);
+  static const Color azulFundo = Color(0xFFE3F2FD);
+  static const Color azulIcone = Color(0xFF1565C0);
 }

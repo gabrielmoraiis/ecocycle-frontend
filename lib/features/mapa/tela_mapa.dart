@@ -13,6 +13,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/services/ponto_coleta_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/eco_bottom_nav_bar.dart';
+import '../../core/widgets/layout_eco.dart';
 import '../../core/widgets/error_state.dart';
 import '../../core/widgets/loading_indicator.dart';
 
@@ -30,14 +31,12 @@ class TelaMapa extends StatefulWidget {
 }
 
 class _TelaMapaState extends State<TelaMapa> {
-  final TextEditingController _cepController = TextEditingController(
-    text: '06600-000',
-  );
+  final TextEditingController _cepController = TextEditingController();
 
   late final PontoColetaService _pontoColetaService;
   GoogleMapController? _controladorMapa;
   String _filtroSelecionado = 'Todos';
-  String _cepPesquisado = '06600-000';
+  String _cepPesquisado = '';
   int _indicePontoSelecionado = 0;
   bool _buscandoLocalizacao = false;
   bool _buscandoCep = false;
@@ -108,213 +107,91 @@ class _TelaMapaState extends State<TelaMapa> {
 
     return Scaffold(
       backgroundColor: AppColors.fundoBranco,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // --- TOPO: VOLTAR + LOGO ---
-            Container(
-              color: AppColors.fundoBranco,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: AppColors.verdeClaroFundo,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.chevron_left,
-                          color: AppColors.verdeGradienteInicio,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                  ),
-                  RichText(
-                    text: const TextSpan(
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textoEscuro,
-                      ),
-                      children: [
-                        TextSpan(text: 'Eco'),
-                        TextSpan(
-                          text: 'Cycle',
-                          style: TextStyle(
-                            color: AppColors.verdeGradienteInicio,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+      body: _carregando && _primeiraCarga
+          ? const SafeArea(child: LoadingIndicator())
+          : _erro != null
+          ? SafeArea(
+              child: ErrorState(
+                message: _erro!.message,
+                onRetry: () => _carregarPontos(),
               ),
-            ),
+            )
+          : Stack(
+              children: [
+                // --- MAPA EM TELA CHEIA ---
+                Positioned.fill(
+                  child: GoogleMap(
+                    initialCameraPosition: _posicaoInicial,
+                    onMapCreated: (controller) => _controladorMapa = controller,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
+                    // Mantém o logo e os pinos fora da busca e do painel.
+                    padding: const EdgeInsets.only(top: 150, bottom: 300),
+                    markers: {
+                      for (int i = 0; i < pontos.length; i++)
+                        Marker(
+                          markerId: MarkerId(pontos[i].id.toString()),
+                          position: LatLng(
+                            pontos[i].latitude,
+                            pontos[i].longitude,
+                          ),
+                          infoWindow: InfoWindow(
+                            title: pontos[i].nome,
+                            snippet: pontos[i].endereco,
+                          ),
+                          icon: i == indiceSelecionado
+                              ? BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueGreen,
+                                )
+                              : BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueAzure,
+                                ),
+                          onTap: () =>
+                              setState(() => _indicePontoSelecionado = i),
+                        ),
+                      if (_centroBusca != null)
+                        Marker(
+                          markerId: const MarkerId('centroBusca'),
+                          position: _centroBusca!,
+                          infoWindow: InfoWindow(title: 'CEP $_cepPesquisado'),
+                          icon: BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueRose,
+                          ),
+                        ),
+                    },
+                  ),
+                ),
 
-            // --- BUSCA + FILTROS ---
-            Container(
-              width: double.infinity,
-              color: AppColors.fundoBranco,
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'ENCONTRAR PONTOS DE COLETA',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textoEscuro,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.verdeClaroFundo,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: AppColors.bordaVerdeClara,
+                // --- BUSCA + FILTROS FLUTUANDO NO TOPO ---
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  top: 0,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _construirBusca(),
+                          const SizedBox(height: 10),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _construirChipFiltro('Todos'),
+                                const SizedBox(width: 8),
+                                _construirChipFiltro('Celulares'),
+                                const SizedBox(width: 8),
+                                _construirChipFiltro('Baterias'),
+                              ],
                             ),
                           ),
-                          child: TextField(
-                            controller: _cepController,
-                            keyboardType: TextInputType.number,
-                            textInputAction: TextInputAction.search,
-                            onSubmitted: (_) => _buscarPorCep(),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              color: AppColors.textoEscuro,
-                            ),
-                            decoration: const InputDecoration(
-                              hintText: '06600-000',
-                              hintStyle: TextStyle(
-                                color: AppColors.textoCinzaClaro,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: _buscandoCep ? null : _buscarPorCep,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.verdeGradienteInicio,
-                          foregroundColor: AppColors.fundoBranco,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: _buscandoCep
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.fundoBranco,
-                                ),
-                              )
-                            : const Text(
-                                'Buscar',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _construirChipFiltro('Todos'),
-                      const SizedBox(width: 8),
-                      _construirChipFiltro('Celulares'),
-                      const SizedBox(width: 8),
-                      _construirChipFiltro('Baterias'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // --- MAPA + PAINEL DE PONTOS (painel flutua sobre o mapa como
-            // overlay: expandir/recolher não redimensiona o GoogleMap, que é
-            // caro para relayoutar a cada frame da animação) ---
-            Expanded(
-              child: _carregando && _primeiraCarga
-                  ? const LoadingIndicator()
-                  : _erro != null
-                  ? ErrorState(
-                      message: _erro!.message,
-                      onRetry: () => _carregarPontos(),
-                    )
-                  : Stack(
-                      children: [
-                        GoogleMap(
-                          initialCameraPosition: _posicaoInicial,
-                          onMapCreated: (controller) =>
-                              _controladorMapa = controller,
-                          myLocationButtonEnabled: false,
-                          zoomControlsEnabled: true,
-                          markers: {
-                            for (int i = 0; i < pontos.length; i++)
-                              Marker(
-                                markerId: MarkerId(pontos[i].id.toString()),
-                                position: LatLng(
-                                  pontos[i].latitude,
-                                  pontos[i].longitude,
-                                ),
-                                infoWindow: InfoWindow(
-                                  title: pontos[i].nome,
-                                  snippet: pontos[i].endereco,
-                                ),
-                                icon: i == indiceSelecionado
-                                    ? BitmapDescriptor.defaultMarkerWithHue(
-                                        BitmapDescriptor.hueGreen,
-                                      )
-                                    : BitmapDescriptor.defaultMarkerWithHue(
-                                        BitmapDescriptor.hueAzure,
-                                      ),
-                                onTap: () =>
-                                    setState(() => _indicePontoSelecionado = i),
-                              ),
-                            if (_centroBusca != null)
-                              Marker(
-                                markerId: const MarkerId('centroBusca'),
-                                position: _centroBusca!,
-                                infoWindow: InfoWindow(
-                                  title: 'CEP $_cepPesquisado',
-                                ),
-                                icon: BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueRose,
-                                ),
-                              ),
-                          },
-                        ),
-                        if (_carregando)
-                          const Positioned(
-                            top: 12,
-                            left: 0,
-                            right: 0,
-                            child: Center(
+                          if (_carregando) ...[
+                            const SizedBox(height: 10),
+                            const Center(
                               child: Card(
                                 shape: CircleBorder(),
                                 child: Padding(
@@ -330,209 +207,49 @@ class _TelaMapaState extends State<TelaMapa> {
                                 ),
                               ),
                             ),
-                          ),
-                        Positioned(
-                          right: 16,
-                          bottom: 96,
-                          child: FloatingActionButton(
-                            heroTag: 'localizacaoAtual',
-                            backgroundColor: AppColors.fundoBranco,
-                            foregroundColor: AppColors.verdeGradienteInicio,
-                            elevation: 3,
-                            onPressed: _buscandoLocalizacao
-                                ? null
-                                : _irParaLocalizacaoAtual,
-                            child: _buscandoLocalizacao
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.my_location),
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            width: double.infinity,
-                            decoration: const BoxDecoration(
-                              color: AppColors.fundoBranco,
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(24),
-                                topRight: Radius.circular(24),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0x14000000),
-                                  blurRadius: 12,
-                                  offset: Offset(0, -4),
-                                ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () => setState(
-                                    () => _painelExpandido = !_painelExpandido,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Center(
-                                        child: Container(
-                                          width: 40,
-                                          height: 4,
-                                          margin: const EdgeInsets.only(
-                                            bottom: 16,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.bordaVerdeClara,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            '${pontos.length} ponto${pontos.length == 1 ? '' : 's'} encontrado${pontos.length == 1 ? '' : 's'}',
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.textoEscuro,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              'próximos a $_cepPesquisado',
-                                              textAlign: TextAlign.right,
-                                              style: const TextStyle(
-                                                fontSize: 13,
-                                                color:
-                                                    AppColors.textoCinzaClaro,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          AnimatedRotation(
-                                            turns: _painelExpandido ? 0.5 : 0,
-                                            duration: const Duration(
-                                              milliseconds: 200,
-                                            ),
-                                            child: const Icon(
-                                              Icons.keyboard_arrow_up,
-                                              color: AppColors.textoCinzaClaro,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                AnimatedCrossFade(
-                                  duration: const Duration(milliseconds: 220),
-                                  sizeCurve: Curves.easeInOut,
-                                  crossFadeState: _painelExpandido
-                                      ? CrossFadeState.showSecond
-                                      : CrossFadeState.showFirst,
-                                  firstChild: const SizedBox(
-                                    width: double.infinity,
-                                  ),
-                                  secondChild: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 12),
-                                      if (pontos.isEmpty)
-                                        const Padding(
-                                          padding: EdgeInsets.symmetric(
-                                            vertical: 24,
-                                          ),
-                                          child: Text(
-                                            'Nenhum ponto encontrado para esse filtro.',
-                                            style: TextStyle(
-                                              color: AppColors.textoCinzaClaro,
-                                            ),
-                                          ),
-                                        )
-                                      else ...[
-                                        SizedBox(
-                                          height: 108,
-                                          child: ListView.separated(
-                                            itemCount: pontos.length,
-                                            separatorBuilder:
-                                                (context, index) =>
-                                                    const SizedBox(height: 10),
-                                            itemBuilder: (context, index) =>
-                                                _construirCartaoPonto(
-                                                  pontos[index],
-                                                  index,
-                                                  indiceSelecionado,
-                                                ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          child: ElevatedButton.icon(
-                                            onPressed: () => _abrirRota(
-                                              pontos[indiceSelecionado],
-                                            ),
-                                            icon: const Icon(
-                                              Icons.navigation_outlined,
-                                              size: 20,
-                                            ),
-                                            label: const Text(
-                                              'Como chegar',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: AppColors
-                                                  .verdeGradienteInicio,
-                                              foregroundColor:
-                                                  AppColors.fundoBranco,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 16,
-                                                  ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(16),
-                                              ),
-                                              elevation: 0,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                          ],
+                        ],
+                      ),
                     ),
+                  ),
+                ),
+
+                // --- PAINEL DE BAIXO + BOTÃO DE LOCALIZAÇÃO ---
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 14, bottom: 12),
+                        child: FloatingActionButton(
+                          heroTag: 'localizacaoAtual',
+                          backgroundColor: AppColors.fundoBranco,
+                          foregroundColor: AppColors.verdeCabecalho,
+                          elevation: 3,
+                          tooltip: 'Ir para minha localização',
+                          onPressed: _buscandoLocalizacao
+                              ? null
+                              : _irParaLocalizacaoAtual,
+                          child: _buscandoLocalizacao
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.my_location),
+                        ),
+                      ),
+                      _construirPainel(pontos, indiceSelecionado),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
       // --- BARRA DE NAVEGAÇÃO INFERIOR ---
       bottomNavigationBar: const EcoBottomNavBar(tabAtual: EcoTab.mapa),
     );
@@ -695,136 +412,80 @@ class _TelaMapaState extends State<TelaMapa> {
     ).showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
-  Widget _construirChipFiltro(String rotulo) {
-    final bool selecionado = _filtroSelecionado == rotulo;
-    return GestureDetector(
-      onTap: () => setState(() {
-        _filtroSelecionado = rotulo;
-        _indicePontoSelecionado = 0;
-      }),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: selecionado
-              ? AppColors.verdeClaroFundo
-              : AppColors.fundoBranco,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: selecionado
-                ? AppColors.destaqueVerdeClaro
-                : AppColors.bordaVerdeClara,
-          ),
-        ),
-        child: Text(
-          rotulo,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: selecionado
-                ? AppColors.verdeEscuroTexto
-                : AppColors.textoEscuro,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _construirCartaoPonto(
-    PontoColeta ponto,
-    int indice,
-    int indiceSelecionado,
-  ) {
-    final bool selecionado = indice == indiceSelecionado;
-
-    return GestureDetector(
-      onTap: () => setState(() => _indicePontoSelecionado = indice),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: selecionado
-              ? AppColors.verdeClaroFundo
-              : AppColors.fundoBranco,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selecionado
-                ? AppColors.destaqueVerdeClaro
-                : AppColors.bordaVerdeClara,
-          ),
-        ),
+  Widget _construirBusca() {
+    return Material(
+      color: AppColors.fundoBranco,
+      elevation: 4,
+      shadowColor: const Color(0x33000000),
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.fundoBranco,
-                borderRadius: BorderRadius.circular(12),
+            IconButton(
+              icon: const Icon(
+                Icons.chevron_left,
+                color: AppColors.verdeCabecalho,
               ),
-              child: const Icon(
-                Icons.delete_outline,
-                color: AppColors.verdeGradienteInicio,
-                size: 22,
-              ),
+              tooltip: 'Voltar',
+              onPressed: () => Navigator.maybePop(context),
             ),
-            const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ponto.nome,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textoEscuro,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    ponto.endereco,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textoCinzaClaro,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    children: [
-                      for (final tipo in ponto.tiposResiduoAceitos)
-                        _construirTagCategoria(tipo),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  ponto.distanciaKm == null
-                      ? '--'
-                      : '${ponto.distanciaKm!.toStringAsFixed(1).replaceAll('.', ',')} km',
-                  style: const TextStyle(
+              child: TextField(
+                controller: _cepController,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.search,
+                onSubmitted: (_) => _buscarPorCep(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textoTitulo,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'BUSCAR POR CEP',
+                  labelStyle: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.verdeGradienteInicio,
+                    letterSpacing: 0.5,
+                    color: AppColors.textoSecundario,
+                  ),
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                  hintText: '00000-000',
+                  hintStyle: TextStyle(color: AppColors.textoCinzaClaro),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 6),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Material(
+              color: AppColors.verdeGradienteInicio,
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: _buscandoCep ? null : _buscarPorCep,
+                child: SizedBox(
+                  width: 46,
+                  height: 46,
+                  child: Center(
+                    child: _buscandoCep
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.fundoBranco,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.search,
+                            color: AppColors.fundoBranco,
+                            semanticLabel: 'Buscar',
+                          ),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  ponto.horarioFuncionamento,
-                  textAlign: TextAlign.right,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textoCinzaClaro,
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -832,13 +493,337 @@ class _TelaMapaState extends State<TelaMapa> {
     );
   }
 
-  Widget _construirTagCategoria(String texto) {
-    return Text(
-      texto,
-      style: const TextStyle(
-        fontSize: 11,
-        color: AppColors.textoCinzaClaro,
-        fontWeight: FontWeight.w500,
+  Widget _construirChipFiltro(String rotulo) {
+    final bool selecionado = _filtroSelecionado == rotulo;
+    return Material(
+      color: selecionado ? AppColors.verdeEscuro : AppColors.fundoBranco,
+      elevation: 2,
+      shadowColor: const Color(0x26000000),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => setState(() {
+          _filtroSelecionado = rotulo;
+          _indicePontoSelecionado = 0;
+        }),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Text(
+            rotulo,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: selecionado
+                  ? AppColors.fundoBranco
+                  : AppColors.textoTitulo,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Seleciona um ponto na lista e centraliza o mapa nele.
+  void _selecionarPonto(PontoColeta ponto, int indice) {
+    setState(() {
+      _indicePontoSelecionado = indice;
+      _painelExpandido = false;
+    });
+    _controladorMapa?.animateCamera(
+      CameraUpdate.newLatLng(LatLng(ponto.latitude, ponto.longitude)),
+    );
+  }
+
+  Widget _construirPainel(List<PontoColeta> pontos, int indiceSelecionado) {
+    final bool ordenadoPorDistancia =
+        pontos.isNotEmpty && pontos.first.distanciaKm != null;
+    final String titulo = !ordenadoPorDistancia
+        ? 'PONTOS DE COLETA'
+        : _cepPesquisado == 'você'
+        ? 'MAIS PRÓXIMO DE VOCÊ'
+        : 'MAIS PRÓXIMO DE $_cepPesquisado';
+
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppColors.fundoBranco,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 18,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: AppColors.bordaVerdeClara,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _painelExpandido ? 'TODOS OS PONTOS' : titulo,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                    color: AppColors.verdeCabecalho,
+                  ),
+                ),
+              ),
+              if (pontos.length > 1)
+                TextButton(
+                  onPressed: () =>
+                      setState(() => _painelExpandido = !_painelExpandido),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.verdeCabecalho,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: Text(
+                    _painelExpandido
+                        ? 'Fechar'
+                        : 'Ver todos (${pontos.length})',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          if (pontos.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Text(
+                'Nenhum ponto encontrado para esse filtro.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textoSecundario),
+              ),
+            )
+          else if (_painelExpandido)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 300),
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: pontos.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) => _construirLinhaPonto(
+                  pontos[index],
+                  index,
+                  index == indiceSelecionado,
+                ),
+              ),
+            )
+          else ...[
+            _construirDetalhePonto(pontos[indiceSelecionado]),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () => _abrirRota(pontos[indiceSelecionado]),
+              icon: const Icon(Icons.navigation_outlined, size: 20),
+              label: const Text('Como chegar'),
+              style: BotoesEco.principal(altura: 50),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatarDistancia(PontoColeta ponto) =>
+      '${ponto.distanciaKm!.toStringAsFixed(1).replaceAll('.', ',')} km';
+
+  Widget _construirDetalhePonto(PontoColeta ponto) {
+    const int maxTags = 3;
+    final tipos = ponto.tiposResiduoAceitos;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const IconeQuadradoEco(
+              icone: Icons.recycling,
+              cor: AppColors.verdeCabecalho,
+              corFundo: AppColors.verdeSobreCabecalho,
+              tamanho: 48,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          ponto.nome,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textoTitulo,
+                          ),
+                        ),
+                      ),
+                      if (ponto.distanciaKm != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatarDistancia(ponto),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.verdeCabecalho,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    ponto.endereco,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: AppColors.textoSecundario,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 1),
+                        child: Icon(
+                          Icons.schedule,
+                          size: 14,
+                          color: AppColors.verdeCabecalho,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          ponto.horarioFuncionamento,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF2E5E30),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (tipos.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final tipo in tipos.take(maxTags))
+                _construirTagCategoria(tipo),
+              if (tipos.length > maxTags)
+                _construirTagCategoria(
+                  '+${tipos.length - maxTags}',
+                  destaque: false,
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _construirLinhaPonto(PontoColeta ponto, int indice, bool selecionado) {
+    return Material(
+      color: selecionado ? AppColors.verdeClaroFundo : Colors.transparent,
+      child: InkWell(
+        onTap: () => _selecionarPonto(ponto, indice),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+          child: Row(
+            children: [
+              Icon(
+                Icons.location_on,
+                color: selecionado
+                    ? AppColors.verdeGradienteInicio
+                    : AppColors.azulIcone,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ponto.nome,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textoTitulo,
+                      ),
+                    ),
+                    Text(
+                      ponto.endereco,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textoSecundario,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (ponto.distanciaKm != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  _formatarDistancia(ponto),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.verdeCabecalho,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _construirTagCategoria(String texto, {bool destaque = true}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: destaque ? AppColors.verdeClaroFundo : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        texto,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: destaque ? AppColors.verdeEscuro : AppColors.textoSecundario,
+        ),
       ),
     );
   }

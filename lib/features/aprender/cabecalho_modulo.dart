@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_colors.dart';
 
+/// Barra do topo do módulo: voltar, "TRILHA · MÓDULO X DE Y" e o progresso
+/// da trilha em segmentos (concluídos, atual e restantes).
 class CabecalhoModulo extends StatelessWidget {
   final String rotuloTrilha;
-  final String titulo;
   final int numeroAtual;
   final int total;
 
   const CabecalhoModulo({
     super.key,
     required this.rotuloTrilha,
-    required this.titulo,
     required this.numeroAtual,
     required this.total,
   });
@@ -18,63 +19,70 @@ class CabecalhoModulo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      padding: const EdgeInsets.fromLTRB(12, 8, 16, 10),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.verdeGradienteInicio, AppColors.verdeGradienteFim],
-        ),
+        color: AppColors.fundoBranco,
+        border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            'MÓDULO $numeroAtual DE $total - $rotuloTrilha',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-              color: AppColors.branco70,
+          Material(
+            color: AppColors.verdeClaroFundo,
+            shape: const CircleBorder(),
+            child: IconButton(
+              icon: const Icon(
+                Icons.chevron_left,
+                color: AppColors.verdeGradienteInicio,
+              ),
+              tooltip: 'Voltar',
+              onPressed: () => Navigator.pop(context),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            titulo,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textoBranco,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${rotuloTrilha.toUpperCase()} · MÓDULO $numeroAtual DE $total',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    color: AppColors.textoSecundario,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _construirSegmentos(),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          _construirBarraProgresso(),
         ],
       ),
     );
   }
 
-  Widget _construirBarraProgresso() {
+  Widget _construirSegmentos() {
     final int indiceAtual = numeroAtual - 1;
-
     return Row(
       children: [
         for (int i = 0; i < total; i++) ...[
           Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                height: 8,
+            child: Container(
+              height: 6,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(3),
                 color: i < indiceAtual
-                    ? AppColors.destaqueVerdeClaro
+                    ? AppColors.verdeGradienteInicio
                     : i == indiceAtual
-                    ? AppColors.fundoBranco
-                    : AppColors.branco20,
+                    ? const Color(0xFFA5D6A7)
+                    : const Color(0xFFEEEEEE),
               ),
             ),
           ),
-          if (i != total - 1) const SizedBox(width: 6),
+          if (i != total - 1) const SizedBox(width: 4),
         ],
       ],
     );

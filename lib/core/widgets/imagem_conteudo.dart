@@ -7,11 +7,13 @@ import 'package:flutter/material.dart';
 class ImagemConteudo extends StatelessWidget {
   final String? imagemSugerida;
   final EdgeInsets margem;
+  final double raio;
 
   const ImagemConteudo({
     super.key,
     required this.imagemSugerida,
     this.margem = EdgeInsets.zero,
+    this.raio = 16,
   });
 
   static String? _caminhoAsset(String valor) {
@@ -44,7 +46,7 @@ class ImagemConteudo extends StatelessWidget {
       frameBuilder: (context, child, frame, sincrono) => Padding(
         padding: margem,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(raio),
           // Mesma proporção das ilustrações (16:9): aparece inteira em
           // qualquer largura de tela, sem cortar as laterais.
           child: AspectRatio(aspectRatio: 16 / 9, child: child),

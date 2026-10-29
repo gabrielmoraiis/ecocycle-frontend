@@ -21,12 +21,16 @@ const Map<String, String> _semAcento = {
 String _normalizar(String texto) =>
     texto.toLowerCase().split('').map((c) => _semAcento[c] ?? c).join();
 
+/// Arquivo em assets/conteudos/ correspondente ao título, ou null.
+String? ilustracaoPorTitulo(String titulo) {
+  final normalizado = _normalizar(titulo);
+  for (final (palavra, arquivo) in _porPalavraChave) {
+    if (normalizado.contains(palavra)) return arquivo;
+  }
+  return null;
+}
+
 /// Ilustração do conteúdo, escolhida pelo título. Sem correspondência, usa o
 /// `imagemSugerida` do backend (que pode ser nulo).
-String? ilustracaoDoConteudo(ConteudoEducativo conteudo) {
-  final titulo = _normalizar(conteudo.titulo);
-  for (final (palavra, arquivo) in _porPalavraChave) {
-    if (titulo.contains(palavra)) return arquivo;
-  }
-  return conteudo.imagemSugerida;
-}
+String? ilustracaoDoConteudo(ConteudoEducativo conteudo) =>
+    ilustracaoPorTitulo(conteudo.titulo) ?? conteudo.imagemSugerida;

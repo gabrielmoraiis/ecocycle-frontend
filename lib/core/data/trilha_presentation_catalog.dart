@@ -10,12 +10,16 @@ class TrilhaApresentacao {
   final Color corFundoIcone;
   final String subtitulo;
 
+  /// Ilustração de capa da trilha em assets/conteudos/.
+  final String ilustracao;
+
   const TrilhaApresentacao({
     required this.tituloSecao,
     required this.icone,
     required this.corTema,
     required this.corFundoIcone,
     required this.subtitulo,
+    required this.ilustracao,
   });
 }
 
@@ -26,6 +30,7 @@ const Map<TrilhaEnum, TrilhaApresentacao> trilhaPresentationCatalog = {
     corTema: AppColors.verdeGradienteInicio,
     corFundoIcone: AppColors.verdeClaroFundo,
     subtitulo: 'Reduzir, Reutilizar, Reciclar e Reparar',
+    ilustracao: 'reciclar.jpg',
   ),
   TrilhaEnum.lixoEletronico: TrilhaApresentacao(
     tituloSecao: 'TRILHA 2 - LIXO ELETRÔNICO',
@@ -33,5 +38,6 @@ const Map<TrilhaEnum, TrilhaApresentacao> trilhaPresentationCatalog = {
     corTema: Colors.orange,
     corFundoIcone: Color(0xFFFFF3E0),
     subtitulo: 'O problema, componentes, substâncias',
+    ilustracao: 'lixo_eletronico.jpg',
   ),
 };

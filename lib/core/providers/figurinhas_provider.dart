@@ -19,6 +19,15 @@ class FigurinhasProvider extends ChangeNotifier {
   List<Figurinha> get bloqueadas =>
       figurinhas.where((f) => !f.desbloqueada).toList();
 
+  /// Esquece os dados do usuário atual (ao sair da conta), para a próxima
+  /// conta não herdar o cache.
+  void limpar() {
+    figurinhas = [];
+    erro = null;
+    _carregouUmaVez = false;
+    notifyListeners();
+  }
+
   Future<void> carregar({bool forcar = false}) async {
     if (_carregouUmaVez && !forcar) return;
     await recarregar();

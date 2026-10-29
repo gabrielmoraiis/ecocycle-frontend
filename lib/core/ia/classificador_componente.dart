@@ -23,6 +23,11 @@ class ClassificacaoComponente {
 abstract class ClassificadorComponente {
   static bool get suportado => impl.classificadorSuportado;
 
+  /// Componentes que o modelo instalado consegue reconhecer, na ordem das
+  /// classes de saída. Vazio onde não há modelo (web).
+  static List<IdentificadorComponente> get componentesReconhecidos =>
+      impl.componentesDoModelo;
+
   static Future<ClassificadorComponente> carregar() =>
       impl.carregarClassificador();
 

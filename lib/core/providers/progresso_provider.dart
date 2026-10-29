@@ -14,6 +14,15 @@ class ProgressoProvider extends ChangeNotifier {
   ApiException? erro;
   bool _carregouUmaVez = false;
 
+  /// Esquece os dados do usuário atual (ao sair da conta), para a próxima
+  /// conta não herdar o cache.
+  void limpar() {
+    progresso = null;
+    erro = null;
+    _carregouUmaVez = false;
+    notifyListeners();
+  }
+
   Future<void> carregar({bool forcar = false}) async {
     if (_carregouUmaVez && !forcar) return;
     await recarregar();

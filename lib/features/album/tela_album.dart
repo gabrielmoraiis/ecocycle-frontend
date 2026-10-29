@@ -7,7 +7,9 @@ import '../../core/providers/figurinhas_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/eco_bottom_nav_bar.dart';
 import '../../core/widgets/error_state.dart';
+import '../../core/widgets/layout_eco.dart';
 import '../../core/widgets/loading_indicator.dart';
+import '../scanner/tela_scanner.dart';
 import 'tela_info_figurinha.dart';
 
 class TelaAlbum extends StatefulWidget {
@@ -18,6 +20,9 @@ class TelaAlbum extends StatefulWidget {
 }
 
 class _TelaAlbumState extends State<TelaAlbum> {
+  /// null = todas; senão, só as figurinhas desse tipo.
+  TipoFigurinha? _filtro;
+
   @override
   void initState() {
     super.initState();
@@ -32,16 +37,27 @@ class _TelaAlbumState extends State<TelaAlbum> {
 
     return Scaffold(
       backgroundColor: AppColors.verdeClaroFundo,
-      body: SafeArea(
-        child: provider.isLoading && provider.figurinhas.isEmpty
-            ? const LoadingIndicator()
-            : provider.erro != null && provider.figurinhas.isEmpty
-            ? ErrorState(
-                message: provider.erro!.message,
-                onRetry: () => context.read<FigurinhasProvider>().recarregar(),
-              )
-            : _construirConteudo(provider),
-      ),
+      body: provider.isLoading && provider.figurinhas.isEmpty
+          ? const Column(
+              children: [
+                CabecalhoEco(titulo: 'Álbum'),
+                Expanded(child: LoadingIndicator()),
+              ],
+            )
+          : provider.erro != null && provider.figurinhas.isEmpty
+          ? Column(
+              children: [
+                const CabecalhoEco(titulo: 'Álbum'),
+                Expanded(
+                  child: ErrorState(
+                    message: provider.erro!.message,
+                    onRetry: () =>
+                        context.read<FigurinhasProvider>().recarregar(),
+                  ),
+                ),
+              ],
+            )
+          : _construirConteudo(provider),
 
       // --- BARRA DE NAVEGAÇÃO INFERIOR ---
       bottomNavigationBar: const EcoBottomNavBar(tabAtual: EcoTab.album),
@@ -49,180 +65,81 @@ class _TelaAlbumState extends State<TelaAlbum> {
   }
 
   Widget _construirConteudo(FigurinhasProvider provider) {
-    final List<Figurinha> desbloqueadas = provider.desbloqueadas;
-    final List<Figurinha> bloqueadas = provider.bloqueadas;
-    final int total = provider.figurinhas.length;
-    final double progresso = total == 0 ? 0 : desbloqueadas.length / total;
+    // Ordem do álbum (Nº 01, 02...), com as que faltam no lugar delas.
+    final List<Figurinha> todas = [...provider.figurinhas]
+      ..sort((a, b) => a.ordem.compareTo(b.ordem));
+    final List<Figurinha> visiveis = _filtro == null
+        ? todas
+        : todas.where((f) => f.tipo == _filtro).toList();
+    final int desbloqueadas = provider.desbloqueadas.length;
+    final int total = todas.length;
+    final List<Figurinha> faltamDoScanner = todas
+        .where((f) => f.tipo == TipoFigurinha.scan && !f.desbloqueada)
+        .toList();
 
     return RefreshIndicator(
       onRefresh: () => context.read<FigurinhasProvider>().recarregar(),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- TOPO: LOGO + CONTADOR ---
+            CabecalhoEco(
+              titulo: 'Álbum',
+              conteudo: _construirResumo(desbloqueadas, total),
+            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  RichText(
-                    text: const TextSpan(
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textoEscuro,
-                      ),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
                       children: [
-                        TextSpan(text: 'Eco'),
-                        TextSpan(
-                          text: 'Cycle',
-                          style: TextStyle(
-                            color: AppColors.verdeGradienteInicio,
-                          ),
+                        _construirFiltro(null, 'Todas', total),
+                        const SizedBox(width: 8),
+                        _construirFiltro(
+                          TipoFigurinha.quiz,
+                          'Quiz',
+                          todas
+                              .where((f) => f.tipo == TipoFigurinha.quiz)
+                              .length,
+                        ),
+                        const SizedBox(width: 8),
+                        _construirFiltro(
+                          TipoFigurinha.scan,
+                          'Scanner',
+                          todas
+                              .where((f) => f.tipo == TipoFigurinha.scan)
+                              .length,
                         ),
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.verdeClaroFundo,
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: AppColors.bordaVerdeClara),
-                    ),
-                    child: Text(
-                      '${desbloqueadas.length}/$total cards',
-                      style: const TextStyle(
-                        color: AppColors.verdeEscuroTexto,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // --- BANNER VERDE (HERO) ---
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.verdeGradienteInicio,
-                    AppColors.verdeGradienteFim,
-                  ],
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Álbum de Componentes',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textoBranco,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Escaneie aparelhos e leia conteúdos para desbloquear',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: AppColors.branco70,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: progresso,
-                      minHeight: 10,
-                      backgroundColor: AppColors.branco20,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.destaqueVerdeClaro,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${desbloqueadas.length} desbloqueados',
-                        style: const TextStyle(
-                          color: AppColors.branco70,
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        '${(progresso * 100).round()}%',
-                        style: const TextStyle(
-                          color: AppColors.textoBranco,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // --- SEÇÃO DESBLOQUEADOS ---
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _construirTituloSecao('DESBLOQUEADOS'),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: desbloqueadas.length,
+                    itemCount: visiveis.length,
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 0.78,
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          childAspectRatio: 0.66,
                         ),
                     itemBuilder: (context, index) {
-                      return _construirCartaoDesbloqueado(desbloqueadas[index]);
+                      final figurinha = visiveis[index];
+                      return figurinha.desbloqueada
+                          ? _construirCartaoDesbloqueado(figurinha)
+                          : _construirCartaoBloqueado(figurinha);
                     },
                   ),
-                  const SizedBox(height: 24),
-
-                  // --- SEÇÃO BLOQUEADOS ---
-                  _construirTituloSecao('BLOQUEADOS (${bloqueadas.length})'),
-                  const SizedBox(height: 12),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: bloqueadas.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 0.78,
-                        ),
-                    itemBuilder: (context, index) =>
-                        _construirCartaoBloqueado(),
-                  ),
-                  const SizedBox(height: 24),
+                  if (faltamDoScanner.isNotEmpty) ...[
+                    const SizedBox(height: 18),
+                    _construirDicaScanner(faltamDoScanner.length),
+                  ],
                 ],
               ),
             ),
@@ -243,133 +160,271 @@ class _TelaAlbumState extends State<TelaAlbum> {
     );
   }
 
-  Widget _construirTituloSecao(String texto) {
-    return Text(
-      texto,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 1.0,
-        color: AppColors.textoCinzaClaro,
+  Widget _construirResumo(int desbloqueadas, int total) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 76,
+            height: 76,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox.expand(
+                  child: CircularProgressIndicator(
+                    value: total == 0 ? 0 : desbloqueadas / total,
+                    strokeWidth: 8,
+                    backgroundColor: const Color(0x2EFFFFFF),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFFA5D6A7),
+                    ),
+                  ),
+                ),
+                Text(
+                  '$desbloqueadas/$total',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.fundoBranco,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Álbum de Componentes',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.fundoBranco,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Escaneie aparelhos e conclua quizzes para completar.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.35,
+                    color: AppColors.verdeSobreCabecalho,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _construirFiltro(TipoFigurinha? tipo, String rotulo, int quantidade) {
+    final bool selecionado = _filtro == tipo;
+    return ChoiceChip(
+      label: Text('$rotulo · $quantidade'),
+      selected: selecionado,
+      showCheckmark: false,
+      onSelected: (_) => setState(() => _filtro = tipo),
+      labelStyle: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+        color: selecionado ? AppColors.fundoBranco : AppColors.textoTitulo,
+      ),
+      selectedColor: AppColors.verdeEscuro,
+      backgroundColor: AppColors.fundoBranco,
+      side: BorderSide(
+        color: selecionado ? AppColors.verdeEscuro : AppColors.bordaVerdeClara,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 
   Widget _construirCartaoDesbloqueado(Figurinha figurinha) {
     final apresentacao = apresentacaoDaFigurinha(figurinha.codigo);
-    return GestureDetector(
-      onTap: () => _abrirInfoFigurinha(figurinha),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.fundoBranco,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.bordaVerdeClara),
+    final String numero = figurinha.ordem.toString().padLeft(2, '0');
+    final String raridade =
+        apresentacao.raridade[0] +
+        apresentacao.raridade.substring(1).toLowerCase();
+
+    return Material(
+      color: AppColors.fundoBranco,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: Color.lerp(
+            apresentacao.corBadgeFundo,
+            apresentacao.corIcone,
+            0.3,
+          )!,
+          width: 2,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: apresentacao.corFundo,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _abrirInfoFigurinha(figurinha),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: apresentacao.corFundo,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    apresentacao.icone,
+                    color: apresentacao.corIcone,
+                    size: 34,
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: apresentacao.corBadgeFundo,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          apresentacao.raridade,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: apresentacao.corBadgeTexto,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: Icon(
-                        apresentacao.icone,
-                        color: apresentacao.corIcone,
-                        size: 36,
-                      ),
-                    ),
-                  ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                figurinha.nome ?? '',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textoTitulo,
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    figurinha.nome ?? '',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textoEscuro,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    figurinha.descricao ?? '',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textoCinzaClaro,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              Text(
+                'Nº $numero · $raridade',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textoSecundario,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _construirCartaoBloqueado() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFE0E0E0),
-        borderRadius: BorderRadius.circular(16),
+  Widget _construirCartaoBloqueado(Figurinha figurinha) {
+    final apresentacao = apresentacaoDaFigurinha(figurinha.codigo);
+    final String numero = figurinha.ordem.toString().padLeft(2, '0');
+    final bool doScanner = figurinha.tipo == TipoFigurinha.scan;
+
+    return Semantics(
+      label: 'Figurinha $numero bloqueada. ${apresentacao.comoDesbloquear}',
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFBDBDBD), width: 1.5),
+        ),
+        child: ExcludeSemantics(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAEAEA),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        doScanner
+                            ? Icons.center_focus_strong_outlined
+                            : Icons.lock_outline,
+                        size: 16,
+                        color: const Color(0xFF9E9E9E),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        numero,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFFBDBDBD),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '???',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textoCinzaClaro,
+                ),
+              ),
+              Text(
+                apresentacao.comoDesbloquear,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  height: 1.2,
+                  color: AppColors.textoSecundario,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    );
+  }
+
+  Widget _construirDicaScanner(int faltam) {
+    return CartaoEco(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const TelaScanner()),
+      ),
+      child: Row(
         children: [
-          const Text(
-            '???',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF9E9E9E),
+          const IconeQuadradoEco(
+            icone: Icons.photo_camera_outlined,
+            cor: AppColors.azulIcone,
+            corFundo: AppColors.azulFundo,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  faltam == 1
+                      ? 'Falta 1 figurinha do Scanner'
+                      : 'Faltam $faltam figurinhas do Scanner',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textoTitulo,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Escaneie aparelhos para completar o álbum',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textoSecundario,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          const Icon(Icons.lock_outline, color: Color(0xFF9E9E9E), size: 32),
-          const SizedBox(height: 8),
-          const Text(
-            'Use o scanner',
-            style: TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)),
-          ),
+          const Icon(Icons.chevron_right, color: AppColors.textoCinzaClaro),
         ],
       ),
     );

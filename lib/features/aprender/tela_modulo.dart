@@ -7,8 +7,8 @@ import '../../core/models/conteudo_educativo.dart';
 import '../../core/services/trilha_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/async_builder.dart';
-import '../../core/widgets/eco_bottom_nav_bar.dart';
 import '../../core/widgets/imagem_conteudo.dart';
+import '../../core/widgets/layout_eco.dart';
 import 'cabecalho_modulo.dart';
 import 'tela_quiz.dart';
 
@@ -54,43 +54,15 @@ class _TelaModuloState extends State<TelaModulo> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.verdeClaroFundo,
+      backgroundColor: AppColors.fundoBranco,
       body: SafeArea(
         child: Column(
           children: [
-            // --- TOPO: VOLTAR + TÍTULO ---
-            Container(
-              color: AppColors.fundoBranco,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: AppColors.verdeClaroFundo,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.chevron_left,
-                          color: AppColors.verdeGradienteInicio,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                  ),
-                  const Text(
-                    'Aprender',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.verdeGradienteInicio,
-                    ),
-                  ),
-                ],
-              ),
+            // --- TOPO: VOLTAR + TRILHA + PROGRESSO ---
+            CabecalhoModulo(
+              rotuloTrilha: widget.rotuloTrilha,
+              numeroAtual: widget.numeroModulo,
+              total: widget.totalModulos,
             ),
 
             Expanded(
@@ -101,20 +73,20 @@ class _TelaModuloState extends State<TelaModulo> {
                     Expanded(
                       child: SingleChildScrollView(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // --- CABEÇALHO DO MÓDULO (HERO) ---
-                            CabecalhoModulo(
-                              rotuloTrilha: widget.rotuloTrilha,
-                              titulo: widget.tituloModulo,
-                              numeroAtual: widget.numeroModulo,
-                              total: widget.totalModulos,
+                            ImagemConteudo(
+                              imagemSugerida: ilustracaoDoConteudo(conteudo),
+                              raio: 0,
                             ),
-
-                            // --- CONTEÚDO (MARKDOWN) ---
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                              child: _construirCartaoConteudo(conteudo),
+                              padding: const EdgeInsets.fromLTRB(
+                                22,
+                                22,
+                                22,
+                                24,
+                              ),
+                              child: _construirArtigo(conteudo),
                             ),
                           ],
                         ),
@@ -122,42 +94,7 @@ class _TelaModuloState extends State<TelaModulo> {
                     ),
 
                     // --- BOTÃO FIXO: PRONTO! JOGAR O MINI-GAME ---
-                    Container(
-                      width: double.infinity,
-                      color: AppColors.fundoBranco,
-                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: (conteudo.quizId == null)
-                              ? null
-                              : () => _abrirQuiz(context, conteudo),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.verdeGradienteInicio,
-                            foregroundColor: AppColors.fundoBranco,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                widget.textoBotao,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.chevron_right, size: 20),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    _construirRodape(conteudo),
                   ],
                 ),
               ),
@@ -165,9 +102,6 @@ class _TelaModuloState extends State<TelaModulo> {
           ],
         ),
       ),
-
-      // --- BARRA DE NAVEGAÇÃO INFERIOR ---
-      bottomNavigationBar: const EcoBottomNavBar(tabAtual: EcoTab.aprender),
     );
   }
 
@@ -186,29 +120,71 @@ class _TelaModuloState extends State<TelaModulo> {
     );
   }
 
-  Widget _construirCartaoConteudo(ConteudoEducativo conteudo) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.fundoBranco,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.bordaVerdeClara),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ImagemConteudo(
-            imagemSugerida: ilustracaoDoConteudo(conteudo),
-            margem: const EdgeInsets.only(bottom: 20),
+  /// Minutos de leitura estimados a ~200 palavras por minuto.
+  int _minutosDeLeitura(String texto) {
+    final palavras = texto.split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+    return (palavras.length / 200).ceil().clamp(1, 60);
+  }
+
+  Widget _construirArtigo(ConteudoEducativo conteudo) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _construirEtiqueta(
+              'Leitura · ~${_minutosDeLeitura(conteudo.corpo)} min',
+              AppColors.verdeSobreCabecalho,
+              AppColors.verdeEscuro,
+            ),
+            if (conteudo.quizId != null)
+              _construirEtiqueta(
+                conteudo.quizConcluido
+                    ? 'Figurinha já ganha'
+                    : 'Vale 1 figurinha',
+                AppColors.laranjaFundo,
+                AppColors.laranjaTexto,
+              ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          widget.tituloModulo,
+          style: const TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.w900,
+            height: 1.15,
+            color: AppColors.textoTitulo,
           ),
-          _construirMarkdown(conteudo),
-        ],
+        ),
+        const SizedBox(height: 14),
+        _construirMarkdown(conteudo),
+      ],
+    );
+  }
+
+  Widget _construirEtiqueta(String texto, Color fundo, Color cor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: fundo,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        texto,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: cor),
       ),
     );
   }
 
   Widget _construirMarkdown(ConteudoEducativo conteudo) {
+    const corpo = TextStyle(
+      fontSize: 17,
+      color: Color(0xFF424242),
+      height: 1.6,
+    );
     return MarkdownBody(
       data: conteudo.corpo,
       imageBuilder: (uri, _, _) => ImagemConteudo(
@@ -216,34 +192,77 @@ class _TelaModuloState extends State<TelaModulo> {
         margem: const EdgeInsets.symmetric(vertical: 8),
       ),
       styleSheet: MarkdownStyleSheet(
-        p: const TextStyle(
-          fontSize: 14,
-          color: AppColors.textoCinzaClaro,
-          height: 1.4,
-        ),
+        p: corpo,
+        pPadding: const EdgeInsets.only(bottom: 6),
         h1: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: AppColors.textoEscuro,
+          fontSize: 24,
+          fontWeight: FontWeight.w900,
+          color: AppColors.textoTitulo,
         ),
         h2: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+          color: AppColors.textoTitulo,
+        ),
+        h2Padding: const EdgeInsets.only(top: 10),
+        h3: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: AppColors.textoEscuro,
+          color: AppColors.textoTitulo,
         ),
-        h3: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: AppColors.textoEscuro,
-        ),
+        h3Padding: const EdgeInsets.only(top: 8),
         strong: const TextStyle(
           fontWeight: FontWeight.bold,
-          color: AppColors.verdeEscuroTexto,
+          color: AppColors.verdeEscuro,
         ),
-        listBullet: const TextStyle(
-          fontSize: 14,
-          color: AppColors.textoCinzaClaro,
+        listBullet: corpo,
+        blockquote: const TextStyle(
+          fontSize: 16,
+          height: 1.5,
+          color: Color(0xFF2E5E30),
         ),
+        blockquoteDecoration: BoxDecoration(
+          color: AppColors.verdeClaroFundo,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.bordaVerdeClara),
+        ),
+        blockquotePadding: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  Widget _construirRodape(ConteudoEducativo conteudo) {
+    final bool temQuiz = conteudo.quizId != null;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      decoration: const BoxDecoration(
+        color: AppColors.fundoBranco,
+        border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ElevatedButton.icon(
+            onPressed: temQuiz ? () => _abrirQuiz(context, conteudo) : null,
+            icon: const Icon(Icons.sports_esports_outlined, size: 20),
+            label: Text(widget.textoBotao),
+            style: BotoesEco.principal(),
+          ),
+          if (temQuiz) ...[
+            const SizedBox(height: 8),
+            Text(
+              conteudo.quizConcluido
+                  ? 'Você já concluiu este quiz, mas pode jogar de novo'
+                  : 'Acerte as perguntas para ganhar a figurinha',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textoSecundario,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

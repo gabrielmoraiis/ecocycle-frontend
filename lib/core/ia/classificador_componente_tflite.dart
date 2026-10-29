@@ -20,6 +20,9 @@ const List<IdentificadorComponente> _classes = [
   IdentificadorComponente.pilha,
 ];
 
+/// O que o modelo instalado reconhece (mostrado no Scanner).
+const List<IdentificadorComponente> componentesDoModelo = _classes;
+
 Future<ClassificadorComponente> carregarClassificador() async {
   final Interpreter interpreter = await Interpreter.fromAsset(_caminhoModelo);
   try {
