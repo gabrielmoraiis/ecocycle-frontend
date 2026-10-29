@@ -253,8 +253,8 @@ class _TelaModuloState extends State<TelaModulo> {
             const SizedBox(height: 8),
             Text(
               conteudo.quizConcluido
-                  ? 'Você já concluiu este quiz, mas pode jogar de novo'
-                  : 'Acerte as perguntas para ganhar a figurinha',
+                  ? 'Já concluído: acerte mais que da última vez para ganhar XP'
+                  : 'Cada pergunta certa vale XP · concluir libera a figurinha',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 12,

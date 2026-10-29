@@ -262,13 +262,20 @@ class TelaConquista extends StatelessWidget {
   List<Widget> _construirDestaquesNumericos() {
     final ResultadoSubmissao? quiz = _quiz;
     if (quiz != null) {
+      // XP é por acerto e vale o melhor resultado: refazer sem acertar mais
+      // não rende XP.
       final bool ganhouXp = quiz.xpGanho > 0;
+      final String rotuloXp = ganhouXp
+          ? (quiz.primeiraConclusao ? 'ganhos agora' : 'novo recorde!')
+          : (quiz.primeiraConclusao
+                ? 'nenhum acerto'
+                : 'acerte mais para ganhar');
       return [
         Expanded(
           child: _construirBlocoNumero(
             icone: Icons.bolt,
             valor: ganhouXp ? '+${quiz.xpGanho} XP' : '0 XP',
-            rotulo: ganhouXp ? 'ganhos agora' : 'já recebido antes',
+            rotulo: rotuloXp,
             corFundo: const Color(0xFFFFF6E5),
             corIconeFundo: const Color(0xFFFFE0B2),
             corValor: const Color(0xFF7A3A00),
