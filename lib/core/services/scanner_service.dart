@@ -27,4 +27,15 @@ class ScannerService {
       );
     });
   }
+
+  /// Registra uma foto que o modelo classificou como Outros. Serve só para
+  /// acompanhar o modelo em uso real: a resposta não muda nada na tela.
+  Future<void> registrarObjetoDesconhecido(double confianca) {
+    return runApiCall(() async {
+      await _dio.post(
+        '/scanner/reconhecer',
+        data: {'identificadorComponente': 'OUTROS', 'confianca': confianca},
+      );
+    });
+  }
 }

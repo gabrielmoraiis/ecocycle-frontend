@@ -135,9 +135,9 @@ Future<void> _analisarFoto(
 
 void main() {
   group('Scanner', () {
-    testWidgets('Outros avisa que o objeto não é reconhecido e não chama a '
-        'API', (tester) async {
-      final api = _ApiFalsa(200, _resposta(reconhecido: true));
+    testWidgets('Outros avisa que o objeto não é reconhecido e registra a '
+        'leitura na API', (tester) async {
+      final api = _ApiFalsa(200, _resposta(reconhecido: false));
 
       await _analisarFoto(
         tester,
@@ -150,7 +150,30 @@ void main() {
 
       expect(find.text(_msgObjetoDesconhecido), findsOneWidget);
       expect(find.text('Tentar novamente'), findsOneWidget);
-      expect(api.pedidos, isEmpty);
+      expect(api.pedidos, hasLength(1));
+      expect(api.pedidos.single.path, '/scanner/reconhecer');
+      expect(api.pedidos.single.data, {
+        'identificadorComponente': 'OUTROS',
+        'confianca': 99.0,
+      });
+    });
+
+    testWidgets('Outros mantém o aviso quando o registro na API falha', (
+      tester,
+    ) async {
+      final api = _ApiFalsa(500, {'message': 'erro'});
+
+      await _analisarFoto(
+        tester,
+        classificacao: const ClassificacaoComponente(
+          identificador: null,
+          confianca: 99,
+        ),
+        api: api,
+      );
+
+      expect(find.text(_msgObjetoDesconhecido), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
     });
 
     for (final componente in [

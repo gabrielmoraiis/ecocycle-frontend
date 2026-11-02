@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -455,9 +457,17 @@ class _TelaScannerState extends State<TelaScanner> {
     if (!mounted) return;
 
     final identificador = classificacao.identificador;
-    // Classe Outros: não é um aparelho do Scanner, nem adianta consultar a API.
+    // Classe Outros: não é um aparelho do Scanner. A API só registra a leitura,
+    // então a tela não espera a resposta e uma falha ali não aparece ao usuário.
     if (identificador == null) {
       _mostrarFalha(_mensagemObjetoDesconhecido);
+      unawaited(
+        _scannerService
+            .registrarObjetoDesconhecido(classificacao.confianca)
+            .catchError((Object e) {
+              _registrar('falha ao registrar leitura Outros: $e');
+            }),
+      );
       return;
     }
 
