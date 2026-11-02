@@ -12,16 +12,28 @@ const bool classificadorSuportado = true;
 const String _caminhoModelo = 'assets/ia/ecocycle_scanner.tflite';
 
 // Ordem das classes de saída do modelo, conforme o metadata.json embutido no
-// .tflite pelo export do Ultralytics: {0: ferro_passar, 1: mouse, 2: pilha}.
-// Se o modelo for re-treinado, confira essa ordem antes de trocar o arquivo.
-const List<IdentificadorComponente> _classes = [
-  IdentificadorComponente.ferroPassar,
-  IdentificadorComponente.mouse,
-  IdentificadorComponente.pilha,
+// .tflite pelo export do Ultralytics. Se o modelo for re-treinado, confira essa
+// ordem antes de trocar o arquivo. null = classe Outros: a foto não mostra um
+// aparelho reconhecido, então a leitura não vai para o back-end.
+const List<IdentificadorComponente?> _classes = [
+  IdentificadorComponente.ferroPassar, // Ferro de passar
+  IdentificadorComponente.fonte, // Fonte
+  IdentificadorComponente.hd, // HDD
+  IdentificadorComponente.mouse, // Mouse
+  IdentificadorComponente.notebook, // Notebook
+  null, // Outros
+  IdentificadorComponente.placaCircuito, // PCB
+  IdentificadorComponente.pendrive, // Pendrive
+  IdentificadorComponente.pilha, // Pilha
 ];
 
+@visibleForTesting
+const List<IdentificadorComponente?> classesDoModelo = _classes;
+
 /// O que o modelo instalado reconhece (mostrado no Scanner).
-const List<IdentificadorComponente> componentesDoModelo = _classes;
+final List<IdentificadorComponente> componentesDoModelo = _classes
+    .whereType<IdentificadorComponente>()
+    .toList(growable: false);
 
 Future<ClassificadorComponente> carregarClassificador() async {
   final Interpreter interpreter = await Interpreter.fromAsset(_caminhoModelo);
@@ -70,29 +82,19 @@ class _ClassificadorTflite implements ClassificadorComponente {
     // Decodificar e redimensionar a foto é o trabalho pesado: roda em outro
     // isolate para não travar a interface.
     final Float32List entrada = await compute(
-      _prepararEntrada,
-      _PedidoPreparo(bytesImagem, _lado, _canaisPrimeiro),
+      prepararEntrada,
+      PedidoPreparo(bytesImagem, _lado, _canaisPrimeiro),
     );
     // A tela pode ter sido fechada enquanto a foto era preparada.
     if (_fechado) throw StateError('Classificador já foi fechado.');
 
     _interpreter.getInputTensor(0).data = entrada.buffer.asUint8List();
     _interpreter.invoke();
-    final List<double> probabilidades = _normalizar(
+    return classificacaoDaSaida(
       // Copia os bytes do tensor (memória nativa) antes de reinterpretar.
       Uint8List.fromList(
         _interpreter.getOutputTensor(0).data,
       ).buffer.asFloat32List(),
-    );
-
-    int melhor = 0;
-    for (int i = 1; i < probabilidades.length; i++) {
-      if (probabilidades[i] > probabilidades[melhor]) melhor = i;
-    }
-
-    return ClassificacaoComponente(
-      identificador: _classes[melhor],
-      confianca: (probabilidades[melhor] * 100).clamp(0, 100).toDouble(),
     );
   }
 
@@ -102,6 +104,21 @@ class _ClassificadorTflite implements ClassificadorComponente {
     _fechado = true;
     _interpreter.close();
   }
+}
+
+@visibleForTesting
+ClassificacaoComponente classificacaoDaSaida(Float32List saida) {
+  final List<double> probabilidades = _normalizar(saida);
+
+  int melhor = 0;
+  for (int i = 1; i < probabilidades.length; i++) {
+    if (probabilidades[i] > probabilidades[melhor]) melhor = i;
+  }
+
+  return ClassificacaoComponente(
+    identificador: _classes[melhor],
+    confianca: (probabilidades[melhor] * 100).clamp(0, 100).toDouble(),
+  );
 }
 
 // O head Classify do Ultralytics já aplica softmax no export; se a saída não
@@ -118,18 +135,19 @@ List<double> _normalizar(Float32List saida) {
   return [for (final e in exps) e / total];
 }
 
-class _PedidoPreparo {
+class PedidoPreparo {
   final Uint8List bytes;
   final int lado;
   final bool canaisPrimeiro;
 
-  const _PedidoPreparo(this.bytes, this.lado, this.canaisPrimeiro);
+  const PedidoPreparo(this.bytes, this.lado, this.canaisPrimeiro);
 }
 
 // Mesmo pré-processamento do treino de classificação do Ultralytics: recorte
 // quadrado central, redimensiona para lado x lado, RGB em [0, 1], no layout
 // que o modelo espera (NCHW ou NHWC).
-Float32List _prepararEntrada(_PedidoPreparo pedido) {
+@visibleForTesting
+Float32List prepararEntrada(PedidoPreparo pedido) {
   final img.Image? decodificada = img.decodeImage(pedido.bytes);
   if (decodificada == null) {
     throw const FormatException('Não foi possível decodificar a foto.');

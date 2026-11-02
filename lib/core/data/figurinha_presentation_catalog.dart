@@ -50,6 +50,10 @@ const FigurinhaApresentacao _padrao = FigurinhaApresentacao(
   comoDesbloquear: 'Concluindo o conteúdo educativo relacionado.',
 );
 
+// Figurinhas que o modelo instalado ainda não reconhece (celular, monitor e
+// teclado): continuam no álbum, mas não há como desbloquear pelo Scanner.
+const String _emBreveNoScanner = 'Em breve no Scanner IA.';
+
 const Map<String, FigurinhaApresentacao> _catalogo = {
   'FIG-01': FigurinhaApresentacao(
     icone: Icons.refresh,
@@ -208,7 +212,7 @@ const Map<String, FigurinhaApresentacao> _catalogo = {
         'A bateria pode pegar fogo se for amassada ou furada; no lixo comum, os metais da placa contaminam o solo e a água.',
     descarteCorreto:
         'Proteja seus dados, não tente tirar a bateria à força e leve o aparelho inteiro a um ponto de coleta de eletrônicos.',
-    comoDesbloquear: 'Escaneando um celular com o Scanner IA.',
+    comoDesbloquear: _emBreveNoScanner,
     protecaoDados: [
       'Faça backup de fotos e contatos',
       'Saia das suas contas (Google ou Apple)',
@@ -229,7 +233,7 @@ const Map<String, FigurinhaApresentacao> _catalogo = {
         'Quebrados, o vidro e as lâmpadas liberam chumbo e mercúrio, que contaminam o solo e fazem mal se inalados.',
     descarteCorreto:
         'Não quebre nem desmonte. Leve o monitor inteiro a um ponto de coleta de eletroeletrônicos.',
-    comoDesbloquear: 'Escaneando um monitor com o Scanner IA.',
+    comoDesbloquear: _emBreveNoScanner,
   ),
   'FIG-13': FigurinhaApresentacao(
     icone: Icons.keyboard_outlined,
@@ -244,7 +248,7 @@ const Map<String, FigurinhaApresentacao> _catalogo = {
         'O plástico leva séculos para se decompor e a placa interna pode liberar chumbo no ambiente.',
     descarteCorreto:
         'Se ainda funciona, doe. Se não, retire as pilhas (nos sem fio) e leve a um ponto de coleta de eletrônicos.',
-    comoDesbloquear: 'Escaneando um teclado com o Scanner IA.',
+    comoDesbloquear: _emBreveNoScanner,
   ),
   'FIG-14': FigurinhaApresentacao(
     icone: Icons.laptop_outlined,
@@ -304,6 +308,42 @@ const Map<String, FigurinhaApresentacao> _catalogo = {
       'Leve a um ponto de coleta de eletrônicos',
     ],
     temGuiaDescarteSeguro: true,
+  ),
+  'FIG-17': FigurinhaApresentacao(
+    icone: Icons.power_outlined,
+    raridade: 'COMUM',
+    corFundo: Color(0xFFFFF3E0),
+    corIcone: Color(0xFFEF6C00),
+    corBadgeFundo: Color(0xFFFFE0B2),
+    corBadgeTexto: Color(0xFFE65100),
+    substanciasPresentes:
+        'Transformador com cobre, capacitores, placa de circuito com solda de chumbo, carcaça de metal ou plástico e fios revestidos.',
+    riscoAmbiental:
+        'No lixo comum, a placa pode liberar chumbo no solo e na água, e o cobre e os outros metais se perdem. Os capacitores podem guardar carga mesmo desligada da tomada.',
+    descarteCorreto:
+        'Não abra a fonte: os capacitores podem dar choque. Leve inteira, com o cabo, a um ponto de coleta de eletrônicos.',
+    comoDesbloquear: 'Escaneando uma fonte de alimentação com o Scanner IA.',
+  ),
+  'FIG-18': FigurinhaApresentacao(
+    icone: Icons.usb_outlined,
+    raridade: 'RARO',
+    corFundo: Color(0xFFE8EAF6),
+    corIcone: Color(0xFF3949AB),
+    corBadgeFundo: Color(0xFFC5CAE9),
+    corBadgeTexto: Color(0xFF283593),
+    substanciasPresentes:
+        'Chip de memória, pequena placa de circuito com solda, contatos metálicos e carcaça de plástico ou metal.',
+    riscoAmbiental:
+        'É pequeno e costuma ir para o lixo comum, onde a placa contamina o ambiente e os metais se perdem. E um pendrive descartado sem limpeza expõe seus dados pessoais.',
+    descarteCorreto:
+        'Depois de proteger os dados, leve o pendrive a um ponto de coleta de eletrônicos.',
+    comoDesbloquear: 'Escaneando um pendrive com o Scanner IA.',
+    protecaoDados: [
+      'Copie o que quer guardar',
+      'Apague os arquivos e formate o pendrive',
+      'Pendrive quebrado? Destruição por serviço especializado',
+      'Leve a um ponto de coleta de eletrônicos',
+    ],
   ),
 };
 
