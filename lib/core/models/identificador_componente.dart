@@ -10,7 +10,9 @@ enum IdentificadorComponente {
   teclado('TECLADO', 'FIG-13', 'Teclado'),
   notebook('NOTEBOOK', 'FIG-14', 'Notebook'),
   placaCircuito('PLACA_CIRCUITO', 'FIG-15', 'Placa de circuito'),
-  hd('HD', 'FIG-16', 'HD');
+  hd('HD', 'FIG-16', 'HD'),
+  fonte('FONTE', 'FIG-17', 'Fonte de alimentação'),
+  pendrive('PENDRIVE', 'FIG-18', 'Pendrive');
 
   final String valor;
   final String codigoFigurinha;

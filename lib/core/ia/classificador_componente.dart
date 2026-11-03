@@ -6,7 +6,9 @@ import 'classificador_componente_web.dart'
     as impl;
 
 class ClassificacaoComponente {
-  final IdentificadorComponente identificador;
+  /// Null quando o modelo escolheu a classe Outros: a foto não mostra nenhum
+  /// dos aparelhos reconhecidos.
+  final IdentificadorComponente? identificador;
 
   /// Probabilidade da classe vencedora, de 0 a 100.
   final double confianca;

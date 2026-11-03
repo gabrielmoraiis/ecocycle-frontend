@@ -31,7 +31,7 @@ O app conhece 9 componentes — pilha, mouse, ferro de passar, celular, monitor,
 - **dio** — cliente HTTP, com interceptors de autenticação e de erro
 - **flutter_secure_storage** — token JWT
 - **tflite_flutter** + **image** — classificação de imagens on-device (modelo YOLO11-cls exportado pelo Ultralytics)
-- **camera** / **image_picker** — câmera do Scanner
+- **image_picker** — abre o app de câmera ou a galeria do aparelho no Scanner
 - **google_maps_flutter**, **geolocator**, **geocoding**, **url_launcher** — mapa, localização, CEP e rotas
 - **flutter_markdown_plus** — conteúdo dos módulos
 - **sentry_flutter** — monitoramento de erros (desligado por padrão)
@@ -135,7 +135,7 @@ flutter build apk --release --split-per-abi
    unzip -p assets/ia/ecocycle_scanner.tflite metadata.json
    ```
    O campo `"names"` traz a ordem (o Ultralytics ordena pelo nome das pastas do dataset).
-3. **Atualize a lista `_classes`** em `lib/core/ia/classificador_componente_tflite.dart` **na mesma ordem**. Os nomes de pasta esperados são `celular`, `ferro_passar`, `hd`, `monitor`, `mouse`, `notebook`, `pilha`, `placa_circuito` e `teclado`.
+3. **Atualize a lista `_classes`** em `lib/core/ia/classificador_componente_tflite.dart` **na mesma ordem**, uma posição por classe. `Outros` fica como `null`: o Scanner avisa que o objeto não é reconhecido e nada vai para o back-end. Celular, monitor e teclado não estão no modelo atual: as figurinhas continuam no álbum, mas não podem ser desbloqueadas.
    - Quantidade de classes diferente → o modelo não carrega (erro visível).
    - Mesma quantidade, ordem errada → o app troca os itens **sem avisar**. Sempre confira.
 4. **Gere o APK de novo** (rode `flutter clean` antes para não ficar com o modelo antigo em cache).
