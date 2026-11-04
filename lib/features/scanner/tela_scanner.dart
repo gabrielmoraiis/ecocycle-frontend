@@ -27,9 +27,11 @@ const String _mensagemSemFoto =
 const String _mensagemSemSuporte =
     'O Scanner IA funciona apenas no app para celular.';
 
-// O modelo usa uma entrada bem menor que isso; limitar a foto evita decodificar
-// os megapixels da câmera do aparelho só para reduzi-los depois.
-const double _ladoMaximoFoto = 1280;
+// Não baixe muito esse limite: o image_picker reduz a foto sem filtro, e a
+// redução certa, com o filtro do notebook, acontece depois, em prepararEntrada.
+// Ele continua existindo porque é o que faz o plugin devolver um JPEG, já que o
+// pacote image não lê HEIC, e porque evita decodificar fotos de 50 MP ou mais.
+const double _ladoMaximoFoto = 4096;
 
 const Color _fundoScanner = Color(0xFF121A12);
 const Color _verdeDestaque = Color(0xFFA5D6A7);
@@ -443,10 +445,7 @@ class _TelaScannerState extends State<TelaScanner> {
       if (classificador == null) throw StateError('Modelo indisponível.');
       final bytes = await foto.readAsBytes();
       classificacao = await (await classificador).classificar(bytes);
-      _registrar(
-        '${classificacao.identificador?.valor ?? 'OUTROS'} '
-        '(${classificacao.confianca.toStringAsFixed(1)}%)',
-      );
+      _registrar(classificacao.resumo);
     } catch (e, pilha) {
       _registrar('falha ao analisar a foto: $e');
       Sentry.captureException(e, stackTrace: pilha);
@@ -463,7 +462,11 @@ class _TelaScannerState extends State<TelaScanner> {
       _mostrarFalha(_mensagemObjetoDesconhecido);
       unawaited(
         _scannerService
-            .registrarObjetoDesconhecido(classificacao.confianca)
+            .registrarObjetoDesconhecido(
+              classificacao.confianca,
+              segundoIdentificador: classificacao.segundoIdentificador,
+              segundaConfianca: classificacao.segundaConfianca,
+            )
             .catchError((Object e) {
               _registrar('falha ao registrar leitura Outros: $e');
             }),
@@ -475,6 +478,8 @@ class _TelaScannerState extends State<TelaScanner> {
       final resultado = await _scannerService.reconhecer(
         identificador,
         classificacao.confianca,
+        segundoIdentificador: classificacao.segundoIdentificador,
+        segundaConfianca: classificacao.segundaConfianca,
       );
 
       if (!mounted) return;
@@ -483,9 +488,7 @@ class _TelaScannerState extends State<TelaScanner> {
         // Não é erro, mas ajuda a calibrar o limiar do back-end.
         Sentry.captureMessage(
           'Scanner IA: leitura recusada pelo back-end '
-          '(${identificador.valor}, '
-          '${classificacao.confianca.toStringAsFixed(1)}%): '
-          '${resultado.mensagem}',
+          '(${classificacao.resumo}): ${resultado.mensagem}',
         );
         _mostrarFalha(_mensagemNaoIdentificado);
         return;

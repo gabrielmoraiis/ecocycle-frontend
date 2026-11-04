@@ -14,13 +14,13 @@ Aplicativo mobile do **EcoCycle**: um app gamificado de educação e descarte re
 | **Aprender** | Duas trilhas (*Os 4 R's* e *Lixo Eletrônico*) com módulos em texto ilustrado e um quiz por módulo. Cada quiz concluído libera uma figurinha e XP. |
 | **Scanner IA** | Tira uma foto e classifica o aparelho **on-device** com um modelo TensorFlow Lite. Só o resultado (componente + confiança) vai para o back-end; a imagem nunca sai do celular. Tem lanterna e moldura de enquadramento. |
 | **Mapa** | Pontos de coleta no Google Maps, busca por CEP, ordenação por distância, filtros (celulares, baterias) e rota até o ponto. |
-| **Álbum** | 16 figurinhas em ordem (7 de quiz e 9 do Scanner), com dica de como conseguir cada uma. Cada figurinha tem ficha com o que tem dentro, risco ambiental e como descartar. |
+| **Álbum** | 18 figurinhas em ordem (7 de quiz e 11 do Scanner), com dica de como conseguir cada uma. Cada figurinha tem ficha com o que tem dentro, risco ambiental e como descartar. |
 | **Descarte seguro** | Para HD, notebook e celular, a figurinha mostra como proteger os dados antes do descarte. HD e notebook têm um guia passo a passo com checklist. |
 | **Perfil** | Avatar (6 mascotes), estatísticas, sair da conta e excluir conta. |
 | **Conta** | Cadastro e login com e-mail e senha (JWT guardado no armazenamento seguro do aparelho). |
 
 ### O que o Scanner reconhece
-O app conhece 9 componentes — pilha, mouse, ferro de passar, celular, monitor, teclado, notebook, placa de circuito e HD —, mas reconhece de fato **só as classes do modelo instalado**. A tela do Scanner mostra essa lista ("A IA reconhece N aparelhos"). Veja [Trocar o modelo de IA](#trocar-o-modelo-de-ia).
+O app conhece 11 componentes — pilha, mouse, ferro de passar, celular, monitor ou TV, teclado, notebook, placa de circuito, HD, fonte de alimentação e pendrive —, mas reconhece de fato **só as classes do modelo instalado** (hoje, todos os 11). A tela do Scanner mostra essa lista ("A IA reconhece N aparelhos"). Veja [Trocar o modelo de IA](#trocar-o-modelo-de-ia).
 
 ---
 
@@ -135,12 +135,12 @@ flutter build apk --release --split-per-abi
    unzip -p assets/ia/ecocycle_scanner.tflite metadata.json
    ```
    O campo `"names"` traz a ordem (o Ultralytics ordena pelo nome das pastas do dataset).
-3. **Atualize a lista `_classes`** em `lib/core/ia/classificador_componente_tflite.dart` **na mesma ordem**, uma posição por classe. `Outros` fica como `null`: o Scanner avisa que o objeto não é reconhecido e nada vai para o back-end. Celular, monitor e teclado não estão no modelo atual: as figurinhas continuam no álbum, mas não podem ser desbloqueadas.
+3. **Atualize a lista `_classes`** em `lib/core/ia/classificador_componente_tflite.dart` **na mesma ordem**, uma posição por classe. `Outros` fica como `null`: o Scanner avisa que o objeto não é reconhecido e o back-end só registra a leitura. Se um componente sair do modelo, a figurinha continua no álbum, mas não pode ser desbloqueada: ajuste o `comoDesbloquear` dela no catálogo.
    - Quantidade de classes diferente → o modelo não carrega (erro visível).
    - Mesma quantidade, ordem errada → o app troca os itens **sem avisar**. Sempre confira.
 4. **Gere o APK de novo** (rode `flutter clean` antes para não ficar com o modelo antigo em cache).
 
-Para um componente **novo** (fora dos 9), além do modelo é preciso: um valor novo em `lib/core/models/identificador_componente.dart`, a ficha em `figurinha_presentation_catalog.dart` e a figurinha correspondente no back-end (migration + seed), com o mesmo `identificador_scan`.
+Para um componente **novo** (fora dos 11), além do modelo é preciso: um valor novo em `lib/core/models/identificador_componente.dart`, a ficha em `figurinha_presentation_catalog.dart` e a figurinha correspondente no back-end (migration + seed), com o mesmo `identificador_scan`.
 
 > O back-end só aceita leituras com confiança a partir de **90%** (`SCANNER_LIMIAR_CONFIANCA`).
 

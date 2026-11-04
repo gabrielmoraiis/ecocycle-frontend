@@ -13,18 +13,21 @@ const String _caminhoModelo = 'assets/ia/ecocycle_scanner.tflite';
 
 // Ordem das classes de saída do modelo, conforme o metadata.json embutido no
 // .tflite pelo export do Ultralytics. Se o modelo for re-treinado, confira essa
-// ordem antes de trocar o arquivo. null = classe Outros: a foto não mostra um
-// aparelho reconhecido, então a leitura não vai para o back-end.
+// ordem antes de trocar o arquivo. O modelo atual não tem a classe Outros; se
+// ela voltar, entra como null na posição dela: a foto não mostra um aparelho
+// reconhecido, então a leitura não vai para o back-end.
 const List<IdentificadorComponente?> _classes = [
+  IdentificadorComponente.celular, // Celular
   IdentificadorComponente.ferroPassar, // Ferro de passar
   IdentificadorComponente.fonte, // Fonte
   IdentificadorComponente.hd, // HDD
+  IdentificadorComponente.monitor, // Monitor ou TV
   IdentificadorComponente.mouse, // Mouse
   IdentificadorComponente.notebook, // Notebook
-  null, // Outros
   IdentificadorComponente.placaCircuito, // PCB
   IdentificadorComponente.pendrive, // Pendrive
   IdentificadorComponente.pilha, // Pilha
+  IdentificadorComponente.teclado, // Teclado
 ];
 
 @visibleForTesting
@@ -115,11 +118,28 @@ ClassificacaoComponente classificacaoDaSaida(Float32List saida) {
     if (probabilidades[i] > probabilidades[melhor]) melhor = i;
   }
 
+  int? segunda;
+  for (int i = 0; i < probabilidades.length; i++) {
+    if (i == melhor) continue;
+    if (segunda == null || probabilidades[i] > probabilidades[segunda]) {
+      segunda = i;
+    }
+  }
+
   return ClassificacaoComponente(
     identificador: _classes[melhor],
-    confianca: (probabilidades[melhor] * 100).clamp(0, 100).toDouble(),
+    confianca: _percentual(probabilidades[melhor]),
+    segundoIdentificador: segunda == null
+        ? null
+        : _classes[segunda]?.valor ?? 'OUTROS',
+    segundaConfianca: segunda == null
+        ? null
+        : _percentual(probabilidades[segunda]),
   );
 }
+
+double _percentual(double probabilidade) =>
+    (probabilidade * 100).clamp(0, 100).toDouble();
 
 // O head Classify do Ultralytics já aplica softmax no export; se a saída não
 // parecer uma distribuição de probabilidades (logits), aplica aqui.
@@ -135,17 +155,31 @@ List<double> _normalizar(Float32List saida) {
   return [for (final e in exps) e / total];
 }
 
+/// Desfoque leve da foto: alarga o filtro do redimensionamento. Serve para um
+/// modelo que perde confiança com o detalhe fino de fotos de alta resolução.
+/// 1.0 desliga e fica igual ao notebook. O modelo anterior usava 1.5; a cada
+/// novo modelo, calibre com fotos reais e suba aos poucos, porque valores altos
+/// fazem fotos mudarem de classe.
+const double suavizacaoFoto = 1.0;
+
 class PedidoPreparo {
   final Uint8List bytes;
   final int lado;
   final bool canaisPrimeiro;
+  final double suavizacao;
 
-  const PedidoPreparo(this.bytes, this.lado, this.canaisPrimeiro);
+  const PedidoPreparo(
+    this.bytes,
+    this.lado,
+    this.canaisPrimeiro, {
+    this.suavizacao = suavizacaoFoto,
+  });
 }
 
-// Mesmo pré-processamento do treino de classificação do Ultralytics: recorte
-// quadrado central, redimensiona para lado x lado, RGB em [0, 1], no layout
-// que o modelo espera (NCHW ou NHWC).
+// Mesmo pré-processamento do Ultralytics, na mesma ordem, para o resultado bater
+// com o do notebook: leva o menor lado da foto a `lado` com o filtro triângulo,
+// recorta o quadrado central e passa para RGB em [0, 1], no layout que o modelo
+// espera (NCHW ou NHWC).
 @visibleForTesting
 Float32List prepararEntrada(PedidoPreparo pedido) {
   final img.Image? decodificada = img.decodeImage(pedido.bytes);
@@ -154,38 +188,152 @@ Float32List prepararEntrada(PedidoPreparo pedido) {
   }
 
   final img.Image orientada = img.bakeOrientation(decodificada);
-  final int menorLado = math.min(orientada.width, orientada.height);
-  final img.Image quadrada = img.copyCrop(
-    orientada,
-    x: (orientada.width - menorLado) ~/ 2,
-    y: (orientada.height - menorLado) ~/ 2,
-    width: menorLado,
-    height: menorLado,
-  );
-  final img.Image redimensionada = img.copyResize(
-    quadrada,
-    width: pedido.lado,
-    height: pedido.lado,
-    interpolation: img.Interpolation.linear,
+  final int larguraFoto = orientada.width;
+  final int alturaFoto = orientada.height;
+  final int lado = pedido.lado;
+  final int largura = larguraFoto <= alturaFoto
+      ? lado
+      : (lado * larguraFoto) ~/ alturaFoto;
+  final int altura = larguraFoto <= alturaFoto
+      ? (lado * alturaFoto) ~/ larguraFoto
+      : lado;
+
+  final Uint8List rgb = redimensionarTriangulo(
+    orientada
+        .convert(format: img.Format.uint8, numChannels: 3)
+        .getBytes(order: img.ChannelOrder.rgb),
+    larguraFoto,
+    alturaFoto,
+    largura,
+    altura,
+    suavizacao: pedido.suavizacao,
   );
 
-  final Uint8List rgb = redimensionada
-      .convert(format: img.Format.uint8, numChannels: 3)
-      .getBytes(order: img.ChannelOrder.rgb);
-  final Float32List entrada = Float32List(rgb.length);
-  if (!pedido.canaisPrimeiro) {
-    for (int i = 0; i < rgb.length; i++) {
-      entrada[i] = rgb[i] / 255.0;
+  final int inicioX = _inicioDoCentro(largura - lado);
+  final int inicioY = _inicioDoCentro(altura - lado);
+  final int pixels = lado * lado;
+  final Float32List entrada = Float32List(3 * pixels);
+  for (int y = 0; y < lado; y++) {
+    for (int x = 0; x < lado; x++) {
+      final int p = y * lado + x;
+      final int origem = ((y + inicioY) * largura + x + inicioX) * 3;
+      for (int canal = 0; canal < 3; canal++) {
+        // rgb vem intercalado (R G B R G B ...); NCHW quer um plano por canal.
+        final int destino = pedido.canaisPrimeiro
+            ? canal * pixels + p
+            : p * 3 + canal;
+        entrada[destino] = rgb[origem + canal] / 255.0;
+      }
     }
-    return entrada;
-  }
-
-  // rgb vem intercalado (R G B R G B ...); NCHW quer um plano por canal.
-  final int pixels = pedido.lado * pedido.lado;
-  for (int p = 0; p < pixels; p++) {
-    entrada[p] = rgb[p * 3] / 255.0;
-    entrada[pixels + p] = rgb[p * 3 + 1] / 255.0;
-    entrada[2 * pixels + p] = rgb[p * 3 + 2] / 255.0;
   }
   return entrada;
+}
+
+// O torchvision arredonda a metade para o par (round do Python). Errar 1 pixel
+// aqui já move a resposta do modelo, então segue a mesma regra.
+int _inicioDoCentro(int sobra) {
+  final int metade = sobra ~/ 2;
+  return sobra.isOdd && metade.isOdd ? metade + 1 : metade;
+}
+
+/// Redimensiona pixels RGB intercalados como o BILINEAR do Pillow, que é o que
+/// o Ultralytics usa: filtro triângulo, primeiro na horizontal e depois na
+/// vertical. Ao reduzir, o triângulo se alarga para cobrir todos os pixels que
+/// viram um só; o pacote image não tem isso (o linear dele lê apenas 4 pixels).
+@visibleForTesting
+Uint8List redimensionarTriangulo(
+  Uint8List rgb,
+  int largura,
+  int altura,
+  int novaLargura,
+  int novaAltura, {
+  double suavizacao = 1.0,
+}) {
+  final _PesosTriangulo pesosX = _PesosTriangulo(
+    largura,
+    novaLargura,
+    suavizacao,
+  );
+  final Uint8List horizontal = Uint8List(3 * novaLargura * altura);
+  for (int y = 0; y < altura; y++) {
+    final int linha = y * largura * 3;
+    int saida = y * novaLargura * 3;
+    for (int x = 0; x < novaLargura; x++) {
+      for (int canal = 0; canal < 3; canal++) {
+        horizontal[saida++] = pesosX.aplicar(x, rgb, linha + canal, 3);
+      }
+    }
+  }
+
+  final _PesosTriangulo pesosY = _PesosTriangulo(
+    altura,
+    novaAltura,
+    suavizacao,
+  );
+  final Uint8List resultado = Uint8List(3 * novaLargura * novaAltura);
+  final int passoLinha = novaLargura * 3;
+  int saida = 0;
+  for (int y = 0; y < novaAltura; y++) {
+    for (int coluna = 0; coluna < passoLinha; coluna++) {
+      resultado[saida++] = pesosY.aplicar(y, horizontal, coluna, passoLinha);
+    }
+  }
+  return resultado;
+}
+
+/// Pesos do filtro triângulo em um eixo, normalizados para cada pixel novo.
+class _PesosTriangulo {
+  final Int32List _inicios;
+  final Int32List _quantidades;
+  final Float64List _pesos;
+  final int _porPixel;
+
+  factory _PesosTriangulo(int tamanho, int novoTamanho, double suavizacao) {
+    final double escala = tamanho / novoTamanho;
+    // Ao ampliar a escala fica menor que 1, mas o filtro não encolhe.
+    final double largura = math.max(escala, 1.0) * suavizacao;
+    final int porPixel = largura.ceil() * 2 + 1;
+
+    final Int32List inicios = Int32List(novoTamanho);
+    final Int32List quantidades = Int32List(novoTamanho);
+    final Float64List pesos = Float64List(novoTamanho * porPixel);
+    for (int i = 0; i < novoTamanho; i++) {
+      final double centro = (i + 0.5) * escala;
+      final int inicio = math.max((centro - largura + 0.5).toInt(), 0);
+      final int fim = math.min((centro + largura + 0.5).toInt(), tamanho);
+      inicios[i] = inicio;
+      quantidades[i] = fim - inicio;
+
+      double soma = 0;
+      for (int j = 0; j < fim - inicio; j++) {
+        final double distancia = (j + inicio - centro + 0.5).abs() / largura;
+        final double peso = distancia < 1 ? 1 - distancia : 0;
+        pesos[i * porPixel + j] = peso;
+        soma += peso;
+      }
+      for (int j = 0; j < fim - inicio; j++) {
+        pesos[i * porPixel + j] /= soma;
+      }
+    }
+    return _PesosTriangulo._(inicios, quantidades, pesos, porPixel);
+  }
+
+  _PesosTriangulo._(
+    this._inicios,
+    this._quantidades,
+    this._pesos,
+    this._porPixel,
+  );
+
+  /// Valor do pixel novo [indice], lendo a partir de [base] de [passo] em passo.
+  int aplicar(int indice, Uint8List dados, int base, int passo) {
+    final int inicio = _inicios[indice];
+    final int quantidade = _quantidades[indice];
+    final int primeiroPeso = indice * _porPixel;
+    double valor = 0;
+    for (int j = 0; j < quantidade; j++) {
+      valor += _pesos[primeiroPeso + j] * dados[base + (inicio + j) * passo];
+    }
+    return (valor + 0.5).floor().clamp(0, 255);
+  }
 }

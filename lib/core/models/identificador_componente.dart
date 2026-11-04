@@ -6,7 +6,7 @@ enum IdentificadorComponente {
   mouse('MOUSE', 'FIG-09', 'Mouse'),
   ferroPassar('FERRO_PASSAR', 'FIG-10', 'Ferro de passar'),
   celular('CELULAR', 'FIG-11', 'Celular'),
-  monitor('MONITOR', 'FIG-12', 'Monitor'),
+  monitor('MONITOR', 'FIG-12', 'Monitor ou TV'),
   teclado('TECLADO', 'FIG-13', 'Teclado'),
   notebook('NOTEBOOK', 'FIG-14', 'Notebook'),
   placaCircuito('PLACA_CIRCUITO', 'FIG-15', 'Placa de circuito'),

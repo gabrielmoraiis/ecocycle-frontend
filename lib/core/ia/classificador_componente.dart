@@ -13,10 +13,28 @@ class ClassificacaoComponente {
   /// Probabilidade da classe vencedora, de 0 a 100.
   final double confianca;
 
+  /// Segunda classe mais provável, como o back-end a conhece: o valor do
+  /// identificador ou OUTROS. Serve só para os logs.
+  final String? segundoIdentificador;
+
+  /// Probabilidade da segunda classe, de 0 a 100.
+  final double? segundaConfianca;
+
   const ClassificacaoComponente({
     required this.identificador,
     required this.confianca,
+    this.segundoIdentificador,
+    this.segundaConfianca,
   });
+
+  /// Ex.: "MOUSE 65.0% PENDRIVE 21.0%".
+  String get resumo {
+    final String primeira =
+        '${identificador?.valor ?? 'OUTROS'} ${confianca.toStringAsFixed(1)}%';
+    final double? segunda = segundaConfianca;
+    if (segundoIdentificador == null || segunda == null) return primeira;
+    return '$primeira $segundoIdentificador ${segunda.toStringAsFixed(1)}%';
+  }
 }
 
 /// Classifica a foto de um componente com o modelo embarcado no app

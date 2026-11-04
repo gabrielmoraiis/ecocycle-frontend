@@ -158,6 +158,54 @@ void main() {
       });
     });
 
+    testWidgets('segunda classe vai para a API junto com a vencedora', (
+      tester,
+    ) async {
+      final api = _ApiFalsa(200, _resposta(reconhecido: false));
+
+      await _analisarFoto(
+        tester,
+        classificacao: const ClassificacaoComponente(
+          identificador: IdentificadorComponente.mouse,
+          confianca: 65,
+          segundoIdentificador: 'PENDRIVE',
+          segundaConfianca: 21,
+        ),
+        api: api,
+      );
+
+      expect(api.pedidos.single.data, {
+        'identificadorComponente': 'MOUSE',
+        'confianca': 65.0,
+        'segundoIdentificador': 'PENDRIVE',
+        'segundaConfianca': 21.0,
+      });
+    });
+
+    testWidgets('segunda classe também vai junto na leitura Outros', (
+      tester,
+    ) async {
+      final api = _ApiFalsa(200, _resposta(reconhecido: false));
+
+      await _analisarFoto(
+        tester,
+        classificacao: const ClassificacaoComponente(
+          identificador: null,
+          confianca: 80,
+          segundoIdentificador: 'MOUSE',
+          segundaConfianca: 12,
+        ),
+        api: api,
+      );
+
+      expect(api.pedidos.single.data, {
+        'identificadorComponente': 'OUTROS',
+        'confianca': 80.0,
+        'segundoIdentificador': 'MOUSE',
+        'segundaConfianca': 12.0,
+      });
+    });
+
     testWidgets('Outros mantém o aviso quando o registro na API falha', (
       tester,
     ) async {
@@ -201,6 +249,27 @@ void main() {
         });
       });
     }
+
+    testWidgets('lista dos 11 aparelhos cabe em tela pequena', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        Provider<Dio>.value(
+          value: Dio(),
+          child: MaterialApp(
+            home: TelaScanner(
+              carregarClassificador: () async => _ClassificadorFalso(null),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('A IA RECONHECE 11 APARELHOS'), findsOneWidget);
+      expect(find.text('Monitor ou TV'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('confiança baixa recusada pela API pede outra foto', (
       tester,

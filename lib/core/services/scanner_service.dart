@@ -12,14 +12,18 @@ class ScannerService {
 
   Future<ResultadoScanner> reconhecer(
     IdentificadorComponente identificador,
-    double confianca,
-  ) {
+    double confianca, {
+    String? segundoIdentificador,
+    double? segundaConfianca,
+  }) {
     return runApiCall(() async {
       final response = await _dio.post(
         '/scanner/reconhecer',
         data: ScannerRequest(
           identificadorComponente: identificador,
           confianca: confianca,
+          segundoIdentificador: segundoIdentificador,
+          segundaConfianca: segundaConfianca,
         ).toJson(),
       );
       return ResultadoScanner.fromJson(
@@ -30,11 +34,20 @@ class ScannerService {
 
   /// Registra uma foto que o modelo classificou como Outros. Serve só para
   /// acompanhar o modelo em uso real: a resposta não muda nada na tela.
-  Future<void> registrarObjetoDesconhecido(double confianca) {
+  Future<void> registrarObjetoDesconhecido(
+    double confianca, {
+    String? segundoIdentificador,
+    double? segundaConfianca,
+  }) {
     return runApiCall(() async {
       await _dio.post(
         '/scanner/reconhecer',
-        data: {'identificadorComponente': 'OUTROS', 'confianca': confianca},
+        data: {
+          'identificadorComponente': 'OUTROS',
+          'confianca': confianca,
+          'segundoIdentificador': ?segundoIdentificador,
+          'segundaConfianca': ?segundaConfianca,
+        },
       );
     });
   }

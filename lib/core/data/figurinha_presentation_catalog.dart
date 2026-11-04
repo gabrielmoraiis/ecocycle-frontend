@@ -50,10 +50,6 @@ const FigurinhaApresentacao _padrao = FigurinhaApresentacao(
   comoDesbloquear: 'Concluindo o conteúdo educativo relacionado.',
 );
 
-// Figurinhas que o modelo instalado ainda não reconhece (celular, monitor e
-// teclado): continuam no álbum, mas não há como desbloquear pelo Scanner.
-const String _emBreveNoScanner = 'Em breve no Scanner IA.';
-
 const Map<String, FigurinhaApresentacao> _catalogo = {
   'FIG-01': FigurinhaApresentacao(
     icone: Icons.refresh,
@@ -212,7 +208,7 @@ const Map<String, FigurinhaApresentacao> _catalogo = {
         'A bateria pode pegar fogo se for amassada ou furada; no lixo comum, os metais da placa contaminam o solo e a água.',
     descarteCorreto:
         'Proteja seus dados, não tente tirar a bateria à força e leve o aparelho inteiro a um ponto de coleta de eletrônicos.',
-    comoDesbloquear: _emBreveNoScanner,
+    comoDesbloquear: 'Escaneando um celular com o Scanner IA.',
     protecaoDados: [
       'Faça backup de fotos e contatos',
       'Saia das suas contas (Google ou Apple)',
@@ -233,7 +229,7 @@ const Map<String, FigurinhaApresentacao> _catalogo = {
         'Quebrados, o vidro e as lâmpadas liberam chumbo e mercúrio, que contaminam o solo e fazem mal se inalados.',
     descarteCorreto:
         'Não quebre nem desmonte. Leve o monitor inteiro a um ponto de coleta de eletroeletrônicos.',
-    comoDesbloquear: _emBreveNoScanner,
+    comoDesbloquear: 'Escaneando um monitor ou TV com o Scanner IA.',
   ),
   'FIG-13': FigurinhaApresentacao(
     icone: Icons.keyboard_outlined,
@@ -248,7 +244,7 @@ const Map<String, FigurinhaApresentacao> _catalogo = {
         'O plástico leva séculos para se decompor e a placa interna pode liberar chumbo no ambiente.',
     descarteCorreto:
         'Se ainda funciona, doe. Se não, retire as pilhas (nos sem fio) e leve a um ponto de coleta de eletrônicos.',
-    comoDesbloquear: _emBreveNoScanner,
+    comoDesbloquear: 'Escaneando um teclado com o Scanner IA.',
   ),
   'FIG-14': FigurinhaApresentacao(
     icone: Icons.laptop_outlined,
