@@ -51,6 +51,7 @@ class _TelaCadastroState extends State<TelaCadastro> {
         email: _emailController.text.trim(),
         apelido: _apelidoController.text.trim(),
         senha: _senhaController.text,
+        aceitouTermos: _aceitouTermos,
       );
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(

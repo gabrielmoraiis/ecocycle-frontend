@@ -62,9 +62,15 @@ class SessionController extends ChangeNotifier {
     required String email,
     required String apelido,
     required String senha,
+    required bool aceitouTermos,
   }) async {
     final resultado = await _authService.registrar(
-      RegisterRequest(email: email, apelido: apelido, senha: senha),
+      RegisterRequest(
+        email: email,
+        apelido: apelido,
+        senha: senha,
+        aceitouTermos: aceitouTermos,
+      ),
     );
     await _aplicarAutenticacao(resultado.token, resultado.usuario);
   }
