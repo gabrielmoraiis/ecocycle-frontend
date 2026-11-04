@@ -125,6 +125,13 @@ flutter build apk --release --split-per-abi
 
 > O release está assinado com a chave de debug (serve para instalar direto e distribuir para testes). Para publicar na Play Store é preciso configurar uma chave de release em `android/app/build.gradle.kts`.
 
+### APK pelo GitHub (sem compilar na máquina)
+
+O workflow `.github/workflows/apk.yml` compila o APK universal a cada push em `main` ou `claude/**` (ou manualmente, em **Actions → APK → Run workflow**) e publica em **Releases**, de onde dá para baixar direto pelo celular. Configure em **Settings → Secrets and variables → Actions**:
+
+- `MAPS_API_KEY` — chave do Google Maps (sem ela o mapa fica em branco);
+- `SENTRY_DSN` — opcional.
+
 ---
 
 ## Trocar o modelo de IA
