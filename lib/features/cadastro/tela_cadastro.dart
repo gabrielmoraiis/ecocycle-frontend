@@ -200,6 +200,24 @@ class _TelaCadastroState extends State<TelaCadastro> {
                 ],
               ),
             ),
+            // Atalhos com área de toque grande: no celular é fácil errar a
+            // palavra do link e acabar marcando a caixinha.
+            Padding(
+              padding: const EdgeInsets.only(left: 36),
+              child: Wrap(
+                spacing: 4,
+                children: [
+                  _construirBotaoDocumento(
+                    'Ler os Termos de Uso',
+                    DocumentoLegal.termosDeUso,
+                  ),
+                  _construirBotaoDocumento(
+                    'Ler a Política de Privacidade',
+                    DocumentoLegal.politicaDePrivacidade,
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: (_aceitouTermos && !_carregando) ? _cadastrar : null,
@@ -228,6 +246,20 @@ class _TelaCadastroState extends State<TelaCadastro> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _construirBotaoDocumento(String texto, DocumentoLegal documento) {
+    return TextButton.icon(
+      onPressed: () => documento.abrir(context),
+      icon: const Icon(Icons.description_outlined, size: 18),
+      label: Text(texto),
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.verdeCabecalho,
+        minimumSize: const Size(48, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+      ),
     );
   }
 }
