@@ -112,12 +112,15 @@ class CartaoFigurinha extends StatelessWidget {
 
     final TextScaler escala = MediaQuery.textScalerOf(context);
     final TextDirection direcao = Directionality.of(context);
+    // Mede com o mesmo estilo efetivo do Text (fonte do tema + estilo local).
+    final TextStyle herdado = DefaultTextStyle.of(context).style;
     double tamanho = base.fontSize!;
     while (tamanho > 12) {
       final TextStyle estilo = base.copyWith(fontSize: tamanho);
+      final TextStyle medido = herdado.merge(estilo);
       final bool cabe = palavras.every((palavra) {
         final TextPainter pintor = TextPainter(
-          text: TextSpan(text: palavra, style: estilo),
+          text: TextSpan(text: palavra, style: medido),
           textDirection: direcao,
           textScaler: escala,
           maxLines: 1,
