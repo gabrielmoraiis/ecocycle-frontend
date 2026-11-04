@@ -8,6 +8,7 @@ import '../../core/services/quiz_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/async_builder.dart';
 import '../../core/widgets/layout_eco.dart';
+import 'tela_quiz.dart';
 
 const Color _vermelho = Color(0xFFC62828);
 const Color _vermelhoFundo = Color(0xFFFFEBEE);
@@ -19,12 +20,14 @@ class TelaCorrecaoQuiz extends StatelessWidget {
   final int quizId;
   final String tituloQuiz;
   final List<CorrecaoPergunta>? correcao;
+  final String rotuloTrilha;
 
   const TelaCorrecaoQuiz({
     super.key,
     required this.quizId,
     required this.tituloQuiz,
     this.correcao,
+    this.rotuloTrilha = '',
   });
 
   Future<(Quiz, List<CorrecaoPergunta>?)> _carregar(QuizService service) async {
@@ -96,10 +99,30 @@ class TelaCorrecaoQuiz extends StatelessWidget {
               style: TextStyle(fontSize: 15, color: AppColors.textoSecundario),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+            ElevatedButton.icon(
+              // Substitui esta tela pelo quiz: ao terminar, o resultado já
+              // traz a correção.
+              onPressed: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TelaQuizModulo(
+                    rotuloTrilha: rotuloTrilha,
+                    tituloQuiz: tituloQuiz,
+                    quizId: quizId,
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.replay, size: 20),
+              label: const Text('Refazer o quiz'),
               style: BotoesEco.principal(),
-              child: const Text('Voltar'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.verdeEscuro,
+              ),
+              child: const Text('Agora não'),
             ),
           ],
         ),

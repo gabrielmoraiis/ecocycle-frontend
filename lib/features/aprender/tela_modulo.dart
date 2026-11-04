@@ -270,6 +270,7 @@ class _TelaModuloState extends State<TelaModulo> {
                     builder: (context) => TelaCorrecaoQuiz(
                       quizId: conteudo.quizId!,
                       tituloQuiz: 'Quiz: ${widget.tituloModulo}',
+                      rotuloTrilha: widget.rotuloTrilha,
                     ),
                   ),
                 ),
