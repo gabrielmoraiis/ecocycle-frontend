@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +9,7 @@ import '../../core/widgets/formulario_eco.dart';
 import '../../core/widgets/layout_eco.dart';
 import '../home/tela_home.dart';
 import '../login/tela_login.dart';
+import '../termos/tela_documento_legal.dart';
 
 class TelaCadastro extends StatefulWidget {
   const TelaCadastro({super.key});
@@ -29,8 +31,16 @@ class _TelaCadastroState extends State<TelaCadastro> {
 
   static final _regexApelido = RegExp(r'^[a-zA-Z0-9_]{3,20}$');
 
+  // Os links abrem o texto sem marcar/desmarcar a caixinha.
+  late final _abrirTermos = TapGestureRecognizer()
+    ..onTap = () => DocumentoLegal.termosDeUso.abrir(context);
+  late final _abrirPrivacidade = TapGestureRecognizer()
+    ..onTap = () => DocumentoLegal.politicaDePrivacidade.abrir(context);
+
   @override
   void dispose() {
+    _abrirTermos.dispose();
+    _abrirPrivacidade.dispose();
     _apelidoController.dispose();
     _emailController.dispose();
     _senhaController.dispose();
@@ -159,23 +169,28 @@ class _TelaCadastroState extends State<TelaCadastro> {
                     onChanged: (novoValor) =>
                         setState(() => _aceitouTermos = novoValor ?? false),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Padding(
-                      padding: EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.only(top: 12),
                       child: Text.rich(
                         TextSpan(
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13,
                             height: 1.4,
                             color: AppColors.textoEscuro,
                           ),
                           children: [
-                            TextSpan(text: 'Aceito os '),
-                            TextSpan(text: 'Termos de Uso', style: estiloLink),
-                            TextSpan(text: ' e a '),
+                            const TextSpan(text: 'Aceito os '),
+                            TextSpan(
+                              text: 'Termos de Uso',
+                              style: estiloLink,
+                              recognizer: _abrirTermos,
+                            ),
+                            const TextSpan(text: ' e a '),
                             TextSpan(
                               text: 'Política de Privacidade',
                               style: estiloLink,
+                              recognizer: _abrirPrivacidade,
                             ),
                           ],
                         ),

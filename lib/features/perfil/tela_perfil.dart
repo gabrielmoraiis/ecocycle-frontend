@@ -11,6 +11,7 @@ import '../../core/providers/trilhas_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/avatar_usuario.dart';
 import '../introducao/tela_inicial.dart';
+import '../termos/tela_documento_legal.dart';
 
 const Color _textoTitulo = Color(0xFF212121);
 const Color _textoSecundario = Color(0xFF616161);
@@ -489,6 +490,24 @@ class _TelaPerfilState extends State<TelaPerfil> {
           titulo: 'Sair da conta',
           subtitulo: 'Você pode entrar de novo quando quiser',
           onTap: _encerrando ? null : _confirmarSaida,
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        _construirOpcaoConta(
+          icone: Icons.description_outlined,
+          cor: AppColors.textoEscuro,
+          corFundo: AppColors.verdeClaroFundo,
+          titulo: 'Termos de Uso',
+          subtitulo: 'Regras de uso do EcoCycle',
+          onTap: () => DocumentoLegal.termosDeUso.abrir(context),
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        _construirOpcaoConta(
+          icone: Icons.privacy_tip_outlined,
+          cor: AppColors.textoEscuro,
+          corFundo: AppColors.verdeClaroFundo,
+          titulo: 'Política de Privacidade',
+          subtitulo: 'Quais dados usamos e seus direitos',
+          onTap: () => DocumentoLegal.politicaDePrivacidade.abrir(context),
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         _construirOpcaoConta(
