@@ -288,10 +288,11 @@ class _TelaAlbumState extends State<TelaAlbum> {
               const SizedBox(height: 6),
               Text(
                 figurinha.nome ?? '',
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 13,
+                  height: 1.15,
                   fontWeight: FontWeight.w900,
                   color: AppColors.textoTitulo,
                 ),
