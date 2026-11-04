@@ -27,7 +27,7 @@ class TelaModulo extends StatefulWidget {
     required this.numeroModulo,
     required this.totalModulos,
     required this.conteudoId,
-    this.textoBotao = 'Pronto! Jogar o mini-game',
+    this.textoBotao = 'Pronto! Responder o quiz',
   });
 
   @override
@@ -93,7 +93,7 @@ class _TelaModuloState extends State<TelaModulo> {
                       ),
                     ),
 
-                    // --- BOTÃO FIXO: PRONTO! JOGAR O MINI-GAME ---
+                    // --- BOTÃO FIXO: PRONTO! RESPONDER O QUIZ ---
                     _construirRodape(conteudo),
                   ],
                 ),
