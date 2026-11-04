@@ -1,6 +1,6 @@
 # Política de Privacidade do EcoCycle
 
-**Versão 1.0 · em vigor desde 4 de novembro de 2026**
+**Versão 1.1 · em vigor desde 4 de novembro de 2026**
 
 Esta política explica quais dados o EcoCycle coleta, para que eles servem e quais são os seus direitos, de acordo com a **Lei Geral de Proteção de Dados (LGPD, Lei nº 13.709/2018)**.
 
@@ -52,10 +52,11 @@ Os dados ficam em servidores de nuvem contratados para hospedar o app, que podem
 
 ## 5. Por quanto tempo
 
-- Enquanto sua conta estiver ativa.
-- **Ao excluir a conta pelo Perfil**, ela é **desativada na hora**: você não consegue mais entrar e seus dados deixam de ser usados. Os registros ficam guardados até o encerramento do projeto.
-- Para **apagar definitivamente** seus dados, envie um e-mail para um dos contatos acima. Atendemos em até **15 dias**.
-- Ao fim do projeto acadêmico, os dados pessoais serão apagados ou anonimizados.
+- Enquanto sua conta existir.
+- **Ao excluir a conta pelo Perfil**, ela e **todos os seus dados** (e-mail, apelido, progresso, respostas dos quizzes, figurinhas e resultados do Scanner IA) são **apagados definitivamente, na hora**. Não é possível desfazer, e o mesmo e-mail pode ser usado num novo cadastro.
+- Os relatórios de erro enviados ao Sentry não contêm seu e-mail nem seu apelido e são apagados automaticamente pelo serviço depois de um tempo.
+- Se não conseguir excluir pelo app, envie um e-mail para um dos contatos acima. Atendemos em até **15 dias**.
+- Ao fim do projeto acadêmico, os dados pessoais que ainda existirem serão apagados.
 
 ## 6. Seus direitos
 

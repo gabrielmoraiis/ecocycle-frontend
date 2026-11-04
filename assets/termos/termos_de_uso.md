@@ -1,6 +1,6 @@
 # Termos de Uso do EcoCycle
 
-**Versão 1.0 · em vigor desde 4 de novembro de 2026**
+**Versão 1.1 · em vigor desde 4 de novembro de 2026**
 
 ## 1. O que é o EcoCycle
 
@@ -17,7 +17,7 @@ Ao criar uma conta, você declara que leu e concorda com estes Termos de Uso e c
 - Para usar o app, você cria uma conta com e-mail, apelido e senha.
 - Você é responsável por manter sua senha em segredo.
 - O apelido aparece no app e não pode conter termos ofensivos. Contas com apelidos impróprios podem ser desativadas.
-- Você pode sair da conta ou excluí-la a qualquer momento, pelo **Perfil**.
+- Você pode sair da conta ou excluí-la a qualquer momento, pelo **Perfil**. A exclusão apaga a conta e todo o seu progresso de forma definitiva.
 
 ## 4. Como usar o app
 

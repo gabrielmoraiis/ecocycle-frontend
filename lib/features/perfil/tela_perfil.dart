@@ -113,8 +113,10 @@ class _TelaPerfilState extends State<TelaPerfil> {
     final confirmou = await _confirmar(
       titulo: 'Excluir conta',
       mensagem:
-          'Tem certeza que deseja excluir sua conta? Essa ação não pode ser desfeita e você perderá o acesso ao seu progresso.',
-      acao: 'Excluir',
+          'Sua conta e todos os seus dados (progresso, XP, figurinhas, '
+          'respostas dos quizzes e resultados do scanner) serão apagados '
+          'definitivamente. Essa ação não pode ser desfeita.',
+      acao: 'Excluir definitivamente',
       corAcao: _vermelho,
     );
     if (!confirmou || !mounted) return;
@@ -515,7 +517,7 @@ class _TelaPerfilState extends State<TelaPerfil> {
           cor: _vermelho,
           corFundo: _vermelhoFundo,
           titulo: 'Excluir conta',
-          subtitulo: 'Apaga sua conta e seu progresso',
+          subtitulo: 'Apaga de vez sua conta e todos os seus dados',
           onTap: _encerrando ? null : _confirmarExclusao,
         ),
       ],
