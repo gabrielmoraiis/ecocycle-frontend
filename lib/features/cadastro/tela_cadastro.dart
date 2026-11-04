@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -31,16 +30,8 @@ class _TelaCadastroState extends State<TelaCadastro> {
 
   static final _regexApelido = RegExp(r'^[a-zA-Z0-9_]{3,20}$');
 
-  // Os links abrem o texto sem marcar/desmarcar a caixinha.
-  late final _abrirTermos = TapGestureRecognizer()
-    ..onTap = () => DocumentoLegal.termosDeUso.abrir(context);
-  late final _abrirPrivacidade = TapGestureRecognizer()
-    ..onTap = () => DocumentoLegal.politicaDePrivacidade.abrir(context);
-
   @override
   void dispose() {
-    _abrirTermos.dispose();
-    _abrirPrivacidade.dispose();
     _apelidoController.dispose();
     _emailController.dispose();
     _senhaController.dispose();
@@ -86,11 +77,6 @@ class _TelaCadastroState extends State<TelaCadastro> {
 
   @override
   Widget build(BuildContext context) {
-    const estiloLink = TextStyle(
-      fontWeight: FontWeight.bold,
-      color: AppColors.verdeCabecalho,
-    );
-
     return TelaFormularioEco(
       titulo: 'Crie sua conta',
       subtitulo: 'Comece a colecionar figurinhas e acompanhe seu progresso.',
@@ -157,21 +143,24 @@ class _TelaCadastroState extends State<TelaCadastro> {
               },
             ),
             const SizedBox(height: 10),
-            InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => setState(() => _aceitouTermos = !_aceitouTermos),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Checkbox(
-                    value: _aceitouTermos,
-                    activeColor: AppColors.verdeGradienteInicio,
-                    onChanged: (novoValor) =>
-                        setState(() => _aceitouTermos = novoValor ?? false),
-                  ),
-                  Expanded(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: _aceitouTermos,
+                  activeColor: AppColors.verdeGradienteInicio,
+                  onChanged: (novoValor) =>
+                      setState(() => _aceitouTermos = novoValor ?? false),
+                ),
+                Expanded(
+                  // Tocar no texto marca a caixinha; tocar num link abre o
+                  // documento (o toque do link vence, por estar mais dentro).
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () =>
+                        setState(() => _aceitouTermos = !_aceitouTermos),
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.only(top: 8),
                       child: Text.rich(
                         TextSpan(
                           style: const TextStyle(
@@ -181,42 +170,19 @@ class _TelaCadastroState extends State<TelaCadastro> {
                           ),
                           children: [
                             const TextSpan(text: 'Aceito os '),
-                            TextSpan(
-                              text: 'Termos de Uso',
-                              style: estiloLink,
-                              recognizer: _abrirTermos,
-                            ),
+                            _link('Termos de Uso', DocumentoLegal.termosDeUso),
                             const TextSpan(text: ' e a '),
-                            TextSpan(
-                              text: 'Política de Privacidade',
-                              style: estiloLink,
-                              recognizer: _abrirPrivacidade,
+                            _link(
+                              'Política de Privacidade',
+                              DocumentoLegal.politicaDePrivacidade,
                             ),
                           ],
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            // Atalhos com área de toque grande: no celular é fácil errar a
-            // palavra do link e acabar marcando a caixinha.
-            Padding(
-              padding: const EdgeInsets.only(left: 36),
-              child: Wrap(
-                spacing: 4,
-                children: [
-                  _construirBotaoDocumento(
-                    'Ler os Termos de Uso',
-                    DocumentoLegal.termosDeUso,
-                  ),
-                  _construirBotaoDocumento(
-                    'Ler a Política de Privacidade',
-                    DocumentoLegal.politicaDePrivacidade,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             ElevatedButton(
@@ -249,16 +215,29 @@ class _TelaCadastroState extends State<TelaCadastro> {
     );
   }
 
-  Widget _construirBotaoDocumento(String texto, DocumentoLegal documento) {
-    return TextButton.icon(
-      onPressed: () => documento.abrir(context),
-      icon: const Icon(Icons.description_outlined, size: 18),
-      label: Text(texto),
-      style: TextButton.styleFrom(
-        foregroundColor: AppColors.verdeCabecalho,
-        minimumSize: const Size(48, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+  /// Link dentro do texto do aceite. Tem uma área de toque um pouco maior
+  /// que a palavra (padding vertical), para o dedo não cair na caixinha.
+  InlineSpan _link(String texto, DocumentoLegal documento) {
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: Semantics(
+        link: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => documento.abrir(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              texto,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                fontWeight: FontWeight.bold,
+                color: AppColors.verdeCabecalho,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
