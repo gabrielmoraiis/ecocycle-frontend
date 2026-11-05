@@ -8,6 +8,7 @@ import '../../core/widgets/formulario_eco.dart';
 import '../../core/widgets/layout_eco.dart';
 import '../home/tela_home.dart';
 import '../login/tela_login.dart';
+import '../termos/tela_documento_legal.dart';
 
 class TelaCadastro extends StatefulWidget {
   const TelaCadastro({super.key});
@@ -51,6 +52,7 @@ class _TelaCadastroState extends State<TelaCadastro> {
         email: _emailController.text.trim(),
         apelido: _apelidoController.text.trim(),
         senha: _senhaController.text,
+        aceitouTermos: _aceitouTermos,
       );
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
@@ -75,11 +77,6 @@ class _TelaCadastroState extends State<TelaCadastro> {
 
   @override
   Widget build(BuildContext context) {
-    const estiloLink = TextStyle(
-      fontWeight: FontWeight.bold,
-      color: AppColors.verdeCabecalho,
-    );
-
     return TelaFormularioEco(
       titulo: 'Crie sua conta',
       subtitulo: 'Comece a colecionar figurinhas e acompanhe seu progresso.',
@@ -146,43 +143,46 @@ class _TelaCadastroState extends State<TelaCadastro> {
               },
             ),
             const SizedBox(height: 10),
-            InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => setState(() => _aceitouTermos = !_aceitouTermos),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Checkbox(
-                    value: _aceitouTermos,
-                    activeColor: AppColors.verdeGradienteInicio,
-                    onChanged: (novoValor) =>
-                        setState(() => _aceitouTermos = novoValor ?? false),
-                  ),
-                  const Expanded(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: _aceitouTermos,
+                  activeColor: AppColors.verdeGradienteInicio,
+                  onChanged: (novoValor) =>
+                      setState(() => _aceitouTermos = novoValor ?? false),
+                ),
+                Expanded(
+                  // Tocar no texto marca a caixinha; tocar num link abre o
+                  // documento (o toque do link vence, por estar mais dentro).
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () =>
+                        setState(() => _aceitouTermos = !_aceitouTermos),
                     child: Padding(
-                      padding: EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.only(top: 8),
                       child: Text.rich(
                         TextSpan(
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13,
                             height: 1.4,
                             color: AppColors.textoEscuro,
                           ),
                           children: [
-                            TextSpan(text: 'Aceito os '),
-                            TextSpan(text: 'Termos de Uso', style: estiloLink),
-                            TextSpan(text: ' e a '),
-                            TextSpan(
-                              text: 'Política de Privacidade',
-                              style: estiloLink,
+                            const TextSpan(text: 'Aceito os '),
+                            _link('Termos de Uso', DocumentoLegal.termosDeUso),
+                            const TextSpan(text: ' e a '),
+                            _link(
+                              'Política de Privacidade',
+                              DocumentoLegal.politicaDePrivacidade,
                             ),
                           ],
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             ElevatedButton(
@@ -212,6 +212,33 @@ class _TelaCadastroState extends State<TelaCadastro> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Link dentro do texto do aceite. Tem uma área de toque um pouco maior
+  /// que a palavra (padding vertical), para o dedo não cair na caixinha.
+  InlineSpan _link(String texto, DocumentoLegal documento) {
+    return WidgetSpan(
+      alignment: PlaceholderAlignment.middle,
+      child: Semantics(
+        link: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => documento.abrir(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              texto,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                fontWeight: FontWeight.bold,
+                color: AppColors.verdeCabecalho,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

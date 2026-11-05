@@ -11,6 +11,7 @@ import '../../core/widgets/cartao_figurinha.dart';
 import '../album/tela_album.dart';
 import '../album/tela_info_figurinha.dart';
 import 'tela_aprender.dart';
+import 'tela_correcao_quiz.dart';
 
 const Color _fundo = Color(0xFF2E7D32);
 const Color _verdeEscuro = Color(0xFF1B5E20);
@@ -24,13 +25,23 @@ class TelaConquista extends StatelessWidget {
   final ResultadoSubmissao? _quiz;
   final ResultadoScanner? _scanner;
 
-  const TelaConquista({super.key, required ResultadoSubmissao resultado})
-    : _quiz = resultado,
-      _scanner = null;
+  /// Quiz respondido, para abrir a correção (só no caminho do quiz).
+  final int? quizId;
+  final String? tituloQuiz;
+
+  const TelaConquista({
+    super.key,
+    required ResultadoSubmissao resultado,
+    this.quizId,
+    this.tituloQuiz,
+  }) : _quiz = resultado,
+       _scanner = null;
 
   const TelaConquista.scanner({super.key, required ResultadoScanner resultado})
     : _quiz = null,
-      _scanner = resultado;
+      _scanner = resultado,
+      quizId = null,
+      tituloQuiz = null;
 
   Figurinha? get _figurinha =>
       _quiz != null ? _quiz.figurinhaDesbloqueada : _scanner!.figurinha;
@@ -436,12 +447,36 @@ class TelaConquista extends StatelessWidget {
 
   List<Widget> _construirBotoes(BuildContext context) {
     final Figurinha? figurinha = _figurinha;
-    if (_quiz != null) {
+    final ResultadoSubmissao? quiz = _quiz;
+    if (quiz != null) {
+      final int? id = quizId;
+      final bool temCorrecao = id != null && quiz.correcao.isNotEmpty;
       return [
-        _construirBotaoPrincipal(
-          texto: 'Voltar às trilhas',
-          onPressed: () => _irParaTrilhas(context),
-        ),
+        if (temCorrecao) ...[
+          _construirBotaoPrincipal(
+            texto: 'Ver correção',
+            icone: Icons.fact_check_outlined,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TelaCorrecaoQuiz(
+                  quizId: id,
+                  tituloQuiz: tituloQuiz ?? 'Quiz',
+                  correcao: quiz.correcao,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          _construirBotaoSecundario(
+            texto: 'Voltar às trilhas',
+            onPressed: () => _irParaTrilhas(context),
+          ),
+        ] else
+          _construirBotaoPrincipal(
+            texto: 'Voltar às trilhas',
+            onPressed: () => _irParaTrilhas(context),
+          ),
         const SizedBox(height: 10),
         _construirBotaoSecundario(
           texto: figurinha != null ? 'Ver figurinha no álbum' : 'Ver álbum',

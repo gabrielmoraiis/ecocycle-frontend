@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../models/correcao_quiz.dart';
 import '../models/quiz.dart';
 import '../models/requests/submeter_quiz_request.dart';
 import '../models/resultado_submissao.dart';
@@ -31,6 +32,17 @@ class QuizService {
         data: SubmeterQuizRequest(respostas: respostas).toJson(),
       );
       return ResultadoSubmissao.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
+    });
+  }
+
+  /// Correção da última tentativa. 404 se a pessoa ainda não respondeu ou se
+  /// o resultado é anterior ao backend guardar as respostas.
+  Future<CorrecaoQuiz> buscarCorrecao(int id) {
+    return runApiCall(() async {
+      final response = await _dio.get('/quizzes/$id/correcao');
+      return CorrecaoQuiz.fromJson(
         response.data['data'] as Map<String, dynamic>,
       );
     });

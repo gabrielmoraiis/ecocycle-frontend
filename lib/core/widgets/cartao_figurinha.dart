@@ -69,19 +69,70 @@ class CartaoFigurinha extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              figurinha.nome ?? '',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF212121),
-              ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final String nome = figurinha.nome ?? '';
+                final TextStyle estilo = _estiloQueCabe(
+                  context,
+                  nome,
+                  constraints.maxWidth,
+                );
+                return Text(
+                  nome,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  style: estilo,
+                );
+              },
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Diminui a fonte do nome até a palavra mais longa caber numa linha, para
+  /// nomes como "Fonte de alimentação" não quebrarem no meio da palavra.
+  static TextStyle _estiloQueCabe(
+    BuildContext context,
+    String nome,
+    double larguraDisponivel,
+  ) {
+    const TextStyle base = TextStyle(
+      fontSize: 22,
+      height: 1.15,
+      fontWeight: FontWeight.w900,
+      color: Color(0xFF212121),
+    );
+    final List<String> palavras = nome
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (palavras.isEmpty || !larguraDisponivel.isFinite) return base;
+
+    final TextScaler escala = MediaQuery.textScalerOf(context);
+    final TextDirection direcao = Directionality.of(context);
+    // Mede com o mesmo estilo efetivo do Text (fonte do tema + estilo local).
+    final TextStyle herdado = DefaultTextStyle.of(context).style;
+    double tamanho = base.fontSize!;
+    while (tamanho > 12) {
+      final TextStyle estilo = base.copyWith(fontSize: tamanho);
+      final TextStyle medido = herdado.merge(estilo);
+      final bool cabe = palavras.every((palavra) {
+        final TextPainter pintor = TextPainter(
+          text: TextSpan(text: palavra, style: medido),
+          textDirection: direcao,
+          textScaler: escala,
+          maxLines: 1,
+        )..layout();
+        final bool coube = pintor.width <= larguraDisponivel;
+        pintor.dispose();
+        return coube;
+      });
+      if (cabe) return estilo;
+      tamanho -= 1;
+    }
+    return base.copyWith(fontSize: tamanho);
   }
 }
 

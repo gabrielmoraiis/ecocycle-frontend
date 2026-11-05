@@ -10,6 +10,7 @@ import '../../core/widgets/async_builder.dart';
 import '../../core/widgets/imagem_conteudo.dart';
 import '../../core/widgets/layout_eco.dart';
 import 'cabecalho_modulo.dart';
+import 'tela_correcao_quiz.dart';
 import 'tela_quiz.dart';
 
 class TelaModulo extends StatefulWidget {
@@ -27,7 +28,7 @@ class TelaModulo extends StatefulWidget {
     required this.numeroModulo,
     required this.totalModulos,
     required this.conteudoId,
-    this.textoBotao = 'Pronto! Jogar o mini-game',
+    this.textoBotao = 'Pronto! Responder o quiz',
   });
 
   @override
@@ -93,7 +94,7 @@ class _TelaModuloState extends State<TelaModulo> {
                       ),
                     ),
 
-                    // --- BOTÃO FIXO: PRONTO! JOGAR O MINI-GAME ---
+                    // --- BOTÃO FIXO: PRONTO! RESPONDER O QUIZ ---
                     _construirRodape(conteudo),
                   ],
                 ),
@@ -245,7 +246,7 @@ class _TelaModuloState extends State<TelaModulo> {
         children: [
           ElevatedButton.icon(
             onPressed: temQuiz ? () => _abrirQuiz(context, conteudo) : null,
-            icon: const Icon(Icons.sports_esports_outlined, size: 20),
+            icon: const Icon(Icons.quiz_outlined, size: 20),
             label: Text(widget.textoBotao),
             style: BotoesEco.principal(),
           ),
@@ -261,6 +262,24 @@ class _TelaModuloState extends State<TelaModulo> {
                 color: AppColors.textoSecundario,
               ),
             ),
+            if (conteudo.quizConcluido)
+              TextButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TelaCorrecaoQuiz(
+                      quizId: conteudo.quizId!,
+                      tituloQuiz: 'Quiz: ${widget.tituloModulo}',
+                      rotuloTrilha: widget.rotuloTrilha,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.fact_check_outlined, size: 18),
+                label: const Text('Ver correção da última tentativa'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.verdeEscuro,
+                ),
+              ),
           ],
         ],
       ),

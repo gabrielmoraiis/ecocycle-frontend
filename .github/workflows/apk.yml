@@ -1,0 +1,75 @@
+# Compila o APK universal de release e publica como Release no GitHub,
+# para baixar direto pelo celular em .../releases (sem .zip).
+#
+# Secrets do repositório (Settings -> Secrets and variables -> Actions):
+#   MAPS_API_KEY  chave do Google Maps SDK for Android (sem ela o mapa fica em branco)
+#   SENTRY_DSN    opcional; DSN do Sentry
+name: APK
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Chave do Google Maps
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          if [ -n "$MAPS_API_KEY" ]; then
+            echo "MAPS_API_KEY=$MAPS_API_KEY" >> android/local.properties
+          else
+            echo "::warning::Secret MAPS_API_KEY não configurado: o mapa vai aparecer em branco no APK."
+          fi
+
+      - run: flutter pub get
+
+      - name: Compilar APK
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: flutter build apk --release --dart-define=SENTRY_DSN="$SENTRY_DSN"
+
+      - name: Renomear APK
+        run: |
+          BRANCH="${GITHUB_REF_NAME//\//-}"
+          NOME="ecocycle-${BRANCH}-${GITHUB_RUN_NUMBER}.apk"
+          mv build/app/outputs/flutter-apk/app-release.apk "$NOME"
+          echo "APK=$NOME" >> "$GITHUB_ENV"
+
+      - name: Publicar Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: APK ${{ github.run_number }} (${{ github.ref_name }})
+          prerelease: ${{ github.ref_name != 'main' }}
+          body: |
+            APK universal de release gerado automaticamente.
+            Branch: `${{ github.ref_name }}` · Commit: ${{ github.sha }}
+            Assinado com a chave de debug: serve para instalar e testar, não para a Play Store.
+          files: ${{ env.APK }}

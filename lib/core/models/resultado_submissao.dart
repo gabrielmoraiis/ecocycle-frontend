@@ -1,3 +1,4 @@
+import 'correcao_quiz.dart';
 import 'figurinha.dart';
 
 class ResultadoSubmissao {
@@ -8,6 +9,9 @@ class ResultadoSubmissao {
   final int xpTotalAtual;
   final Figurinha? figurinhaDesbloqueada;
 
+  /// Correção pergunta a pergunta (vazia se o backend não enviar).
+  final List<CorrecaoPergunta> correcao;
+
   const ResultadoSubmissao({
     required this.acertos,
     required this.totalPerguntas,
@@ -15,6 +19,7 @@ class ResultadoSubmissao {
     required this.xpGanho,
     required this.xpTotalAtual,
     this.figurinhaDesbloqueada,
+    this.correcao = const [],
   });
 
   factory ResultadoSubmissao.fromJson(Map<String, dynamic> json) {
@@ -29,6 +34,7 @@ class ResultadoSubmissao {
       figurinhaDesbloqueada: figurinhaJson == null
           ? null
           : Figurinha.fromJson(figurinhaJson),
+      correcao: CorrecaoPergunta.listaDoJson(json['correcao']),
     );
   }
 }

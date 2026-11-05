@@ -11,6 +11,7 @@ import '../../core/providers/trilhas_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/avatar_usuario.dart';
 import '../introducao/tela_inicial.dart';
+import '../termos/tela_documento_legal.dart';
 
 const Color _textoTitulo = Color(0xFF212121);
 const Color _textoSecundario = Color(0xFF616161);
@@ -112,8 +113,10 @@ class _TelaPerfilState extends State<TelaPerfil> {
     final confirmou = await _confirmar(
       titulo: 'Excluir conta',
       mensagem:
-          'Tem certeza que deseja excluir sua conta? Essa ação não pode ser desfeita e você perderá o acesso ao seu progresso.',
-      acao: 'Excluir',
+          'Sua conta e todos os seus dados (progresso, XP, figurinhas, '
+          'respostas dos quizzes e resultados do scanner) serão apagados '
+          'definitivamente. Essa ação não pode ser desfeita.',
+      acao: 'Excluir definitivamente',
       corAcao: _vermelho,
     );
     if (!confirmou || !mounted) return;
@@ -492,11 +495,29 @@ class _TelaPerfilState extends State<TelaPerfil> {
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         _construirOpcaoConta(
+          icone: Icons.description_outlined,
+          cor: AppColors.textoEscuro,
+          corFundo: AppColors.verdeClaroFundo,
+          titulo: 'Termos de Uso',
+          subtitulo: 'Regras de uso do EcoCycle',
+          onTap: () => DocumentoLegal.termosDeUso.abrir(context),
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        _construirOpcaoConta(
+          icone: Icons.privacy_tip_outlined,
+          cor: AppColors.textoEscuro,
+          corFundo: AppColors.verdeClaroFundo,
+          titulo: 'Política de Privacidade',
+          subtitulo: 'Quais dados usamos e seus direitos',
+          onTap: () => DocumentoLegal.politicaDePrivacidade.abrir(context),
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+        _construirOpcaoConta(
           icone: Icons.delete_outline,
           cor: _vermelho,
           corFundo: _vermelhoFundo,
           titulo: 'Excluir conta',
-          subtitulo: 'Apaga sua conta e seu progresso',
+          subtitulo: 'Apaga de vez sua conta e todos os seus dados',
           onTap: _encerrando ? null : _confirmarExclusao,
         ),
       ],

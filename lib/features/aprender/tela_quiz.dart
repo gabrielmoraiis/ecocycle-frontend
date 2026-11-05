@@ -210,7 +210,11 @@ class _TelaQuizModuloState extends State<TelaQuizModulo> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => TelaConquista(resultado: resultado),
+          builder: (context) => TelaConquista(
+            resultado: resultado,
+            quizId: widget.quizId,
+            tituloQuiz: widget.tituloQuiz,
+          ),
         ),
       );
     } on ApiException catch (e) {
